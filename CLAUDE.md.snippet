@@ -1,0 +1,34 @@
+# Sailkit Worktree Workflow
+
+**CRITICAL:** Never work directly in base project folders. Use git worktrees for isolation.
+
+## Rules
+
+1. **Base folders stay on main** - `fightingwithai.com/`, `bearing-dev/`, etc. must always be on `main`
+2. **Create worktrees for tasks** - Each task gets its own worktree: `repo-branch/`
+3. **Never switch branches in base folders** - Use `git worktree add`, not `git checkout`
+
+## Commands
+
+```bash
+# Create worktree
+worktree-new fightingwithai.com feature-branch
+# Creates: fightingwithai.com-feature-branch/
+
+# Remove after merge
+worktree-cleanup fightingwithai.com feature-branch
+
+# Sync manifest
+worktree-sync
+```
+
+## Active Worktrees
+
+See `sailkit-dev/WORKTREES.md` for current worktrees across all repos.
+
+## Recovery
+
+If you accidentally switch a base folder off main:
+```bash
+git -C fightingwithai.com checkout main
+```

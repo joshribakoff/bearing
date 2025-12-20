@@ -1,0 +1,54 @@
+#!/bin/bash
+set -e
+
+# Sync WORKTREES.md manifest with actual worktree state
+# Usage: wt-sync
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SAILKIT_DIR="$(dirname "$SCRIPT_DIR")"
+PROJECTS_DIR="$(dirname "$SAILKIT_DIR")"
+MANIFEST="$SAILKIT_DIR/WORKTREES.md"
+
+echo "Scanning for worktrees in: $PROJECTS_DIR"
+
+# Start fresh manifest
+cat > "$MANIFEST" << 'EOF'
+# Active Worktrees
+
+> **Note:** This file may be out of sync. Run `wt-sync` to update.
+
+| Worktree | Repo | Branch | Created |
+|----------|------|--------|---------|
+EOF
+
+# Find all git repos (not worktrees themselves)
+for repo_dir in "$PROJECTS_DIR"/*/; do
+    repo_name=$(basename "$repo_dir")
+
+    # Skip if it looks like a worktree (contains hyphen after repo name pattern)
+    # Skip sailkit-dev itself
+    [ "$repo_name" = "sailkit-dev" ] && continue
+
+    # Check if it's a git repo with worktrees
+    if [ -d "$repo_dir/.git" ]; then
+        # List worktrees for this repo
+        while IFS= read -r line; do
+            wt_path=$(echo "$line" | cut -d' ' -f1)
+            wt_name=$(basename "$wt_path")
+
+            # Skip the main worktree
+            [ "$wt_name" = "$repo_name" ] && continue
+
+            # Extract branch from worktree
+            branch=$(git -C "$wt_path" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+
+            # Get creation date (use directory mtime as approximation)
+            created=$(stat -f "%Sm" -t "%Y-%m-%d" "$wt_path" 2>/dev/null || echo "unknown")
+
+            echo "| \`$wt_name\` | $repo_name | $branch | $created |" >> "$MANIFEST"
+        done < <(git -C "$repo_dir" worktree list 2>/dev/null | grep -v "^$")
+    fi
+done
+
+echo "Manifest updated: $MANIFEST"
+cat "$MANIFEST"

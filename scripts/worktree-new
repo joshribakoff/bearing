@@ -1,0 +1,42 @@
+#!/bin/bash
+set -e
+
+# Create a new worktree for a repo/branch combination
+# Usage: wt-new <repo> <branch>
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SAILKIT_DIR="$(dirname "$SCRIPT_DIR")"
+PROJECTS_DIR="$(dirname "$SAILKIT_DIR")"
+
+if [ $# -lt 2 ]; then
+    echo "Usage: wt-new <repo> <branch>"
+    echo "Example: wt-new fightingwithai.com feature-branch"
+    exit 1
+fi
+
+REPO="$1"
+BRANCH="$2"
+REPO_DIR="$PROJECTS_DIR/$REPO"
+WORKTREE_DIR="$PROJECTS_DIR/$REPO-$BRANCH"
+
+if [ ! -d "$REPO_DIR/.git" ] && [ ! -f "$REPO_DIR/.git" ]; then
+    echo "Error: $REPO_DIR is not a git repository"
+    exit 1
+fi
+
+if [ -d "$WORKTREE_DIR" ]; then
+    echo "Error: Worktree already exists: $WORKTREE_DIR"
+    exit 1
+fi
+
+echo "Creating worktree: $WORKTREE_DIR"
+git -C "$REPO_DIR" worktree add "$WORKTREE_DIR" "$BRANCH" 2>/dev/null || \
+git -C "$REPO_DIR" worktree add -b "$BRANCH" "$WORKTREE_DIR"
+
+# Update manifest
+MANIFEST="$SAILKIT_DIR/WORKTREES.md"
+TODAY=$(date +%Y-%m-%d)
+echo "| \`$REPO-$BRANCH\` | $REPO | $BRANCH | $TODAY |" >> "$MANIFEST"
+
+echo "Done. Worktree created at: $WORKTREE_DIR"
+echo "Manifest updated: $MANIFEST"

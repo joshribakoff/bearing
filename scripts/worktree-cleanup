@@ -1,0 +1,39 @@
+#!/bin/bash
+set -e
+
+# Remove a worktree after merge
+# Usage: wt-cleanup <repo> <branch>
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SAILKIT_DIR="$(dirname "$SCRIPT_DIR")"
+PROJECTS_DIR="$(dirname "$SAILKIT_DIR")"
+
+if [ $# -lt 2 ]; then
+    echo "Usage: wt-cleanup <repo> <branch>"
+    echo "Example: wt-cleanup fightingwithai.com feature-branch"
+    exit 1
+fi
+
+REPO="$1"
+BRANCH="$2"
+REPO_DIR="$PROJECTS_DIR/$REPO"
+WORKTREE_DIR="$PROJECTS_DIR/$REPO-$BRANCH"
+
+if [ ! -d "$WORKTREE_DIR" ]; then
+    echo "Error: Worktree not found: $WORKTREE_DIR"
+    exit 1
+fi
+
+echo "Removing worktree: $WORKTREE_DIR"
+git -C "$REPO_DIR" worktree remove "$WORKTREE_DIR"
+
+# Update manifest (remove line containing the worktree)
+MANIFEST="$SAILKIT_DIR/WORKTREES.md"
+if [ -f "$MANIFEST" ]; then
+    # Use temp file for portability
+    grep -v "\`$REPO-$BRANCH\`" "$MANIFEST" > "$MANIFEST.tmp" || true
+    mv "$MANIFEST.tmp" "$MANIFEST"
+    echo "Manifest updated: removed $REPO-$BRANCH"
+fi
+
+echo "Done."
