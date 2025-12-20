@@ -68,7 +68,7 @@ WORKFLOW_ENTRY="{\"repo\":\"$REPO\",\"branch\":\"$BRANCH\",\"basedOn\":\"$BASED_
 echo "$WORKFLOW_ENTRY" >> "$WORKFLOW_FILE"
 
 # Add to local.jsonl (not committed - local worktree path)
-LOCAL_ENTRY="{\"folder\":\"$FOLDER_NAME\",\"repo\":\"$REPO\",\"branch\":\"$BRANCH\"}"
+LOCAL_ENTRY="{\"folder\":\"$FOLDER_NAME\",\"repo\":\"$REPO\",\"branch\":\"$BRANCH\",\"base\":false}"
 echo "$LOCAL_ENTRY" >> "$LOCAL_FILE"
 
 echo "Done. Worktree created at: $WORKTREE_DIR"

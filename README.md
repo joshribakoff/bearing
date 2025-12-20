@@ -15,6 +15,25 @@ git clone https://github.com/sailkit-dev/sailkit-dev ~/Projects/sailkit-dev
 
 The installer prompts for scope (project-level or global) and creates symlinks to Sailkit's skills.
 
+## Architecture
+
+Sailkit leverages git's existing capabilities rather than duplicating them:
+
+| Layer | Responsibility | Storage |
+|-------|---------------|---------|
+| **Git submodules** | Commit pointers, remotes, branch refs | `.gitmodules`, `.git/` |
+| **Manifest** | Workflow metadata cache (purposes, status) | `workflow.jsonl`, `local.jsonl` |
+| **Scripts** | Orchestration, guardrails | `sailkit-dev/scripts/` |
+
+**Design principle:** Git is the source of truth. The manifest is a cache of computed state plus workflow metadata. After a fresh clone, run `worktree-sync` to rebuild the manifest from git state.
+
+**Fresh clone workflow:**
+```bash
+git clone --recurse-submodules https://github.com/user/projects.git
+cd projects
+./sailkit-dev/scripts/worktree-sync  # Rebuild manifest from git
+```
+
 ## Concepts
 
 - **Base folders** (e.g., `fightingwithai.com/`) stay on `main`
@@ -77,10 +96,18 @@ state:
 ## Testing
 
 ```bash
+# Bash smoke tests (quick validation)
 ./test/smoke-test.sh
+
+# Python integration tests (full coverage with mocking)
+cd test && python -m pytest test_integration.py -v
 ```
 
-Runs 14 smoke tests covering all commands and the installer.
+The Python harness provides:
+- Subprocess mocking for stdin/stdout (test like a user)
+- Isolated temp directory per test
+- Parallel test execution support (`pytest -n auto`)
+- Structured assertions on JSONL state files
 
 ## Hooks
 
