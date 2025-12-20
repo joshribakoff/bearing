@@ -1,9 +1,10 @@
 #!/bin/bash
 
 # Validate worktree invariants
-# Usage: worktree-check [--quiet]
-# Exit codes: 0 = all good, 1 = violations found
-# --quiet: Only output if violations found (for hooks)
+# Usage: worktree-check [--quiet] [--json]
+# Exit: Always 0 (for hook compatibility)
+# --quiet: Suppress human-readable output on success
+# --json: Output JSON for Claude Code hooks (implies --quiet for human output)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SAILKIT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -11,45 +12,78 @@ WORKSPACE_DIR="$(dirname "$SAILKIT_DIR")"
 LOCAL_FILE="$WORKSPACE_DIR/local.jsonl"
 
 QUIET=false
-if [ "$1" = "--quiet" ]; then
-    QUIET=true
-fi
+JSON=false
+for arg in "$@"; do
+    case $arg in
+        --quiet) QUIET=true ;;
+        --json) JSON=true ;;
+    esac
+done
 
-VIOLATIONS=0
-VIOLATION_MESSAGES=""
+VIOLATIONS=()
 
 # First sync to get current state
 "$SCRIPT_DIR/worktree-sync" > /dev/null 2>&1
 
-if [ "$QUIET" = false ]; then
-    echo "Checking worktree invariants..."
-    echo ""
+if [ -f "$LOCAL_FILE" ]; then
+    while IFS= read -r line; do
+        folder=$(echo "$line" | sed -n 's/.*"folder":"\([^"]*\)".*/\1/p')
+        branch=$(echo "$line" | sed -n 's/.*"branch":"\([^"]*\)".*/\1/p')
+        base=$(echo "$line" | sed -n 's/.*"base":\([^,}]*\).*/\1/p')
+
+        if [ "$base" = "true" ]; then
+            if [ "$branch" != "main" ] && [ "$branch" != "master" ]; then
+                VIOLATIONS+=("$folder:$branch")
+            fi
+        fi
+    done < "$LOCAL_FILE"
 fi
 
-while IFS= read -r line; do
-    folder=$(echo "$line" | sed -n 's/.*"folder":"\([^"]*\)".*/\1/p')
-    branch=$(echo "$line" | sed -n 's/.*"branch":"\([^"]*\)".*/\1/p')
-    base=$(echo "$line" | sed -n 's/.*"base":\([^,}]*\).*/\1/p')
+if [ "$JSON" = true ]; then
+    # Output JSON for Claude Code hooks
+    if [ ${#VIOLATIONS[@]} -eq 0 ]; then
+        cat <<'EOF'
+{
+  "continue": true
+}
+EOF
+    else
+        # Build violation list
+        VIOLATION_TEXT="SAILKIT WARNING: Base folders on wrong branch. "
+        for v in "${VIOLATIONS[@]}"; do
+            folder="${v%%:*}"
+            branch="${v#*:}"
+            VIOLATION_TEXT+="'$folder' is on '$branch' (should be main). "
+        done
+        VIOLATION_TEXT+="Ask user: fix with 'git -C <folder> checkout main' or proceed anyway?"
 
-    if [ "$base" = "true" ]; then
-        if [ "$branch" != "main" ] && [ "$branch" != "master" ]; then
-            VIOLATION_MESSAGES="${VIOLATION_MESSAGES}✗ VIOLATION: Base folder '$folder' is on '$branch' (expected: main)\n"
-            VIOLATIONS=$((VIOLATIONS + 1))
-        fi
+        # Escape for JSON
+        VIOLATION_TEXT=$(echo "$VIOLATION_TEXT" | sed 's/"/\\"/g')
+
+        cat <<EOF
+{
+  "continue": true,
+  "systemMessage": "$VIOLATION_TEXT"
+}
+EOF
     fi
-done < "$LOCAL_FILE"
+    exit 0
+fi
 
-if [ $VIOLATIONS -eq 0 ]; then
+# Human-readable output
+if [ ${#VIOLATIONS[@]} -eq 0 ]; then
     if [ "$QUIET" = false ]; then
         echo "✓ All invariants satisfied"
     fi
-    exit 0
 else
-    # Always output violations, even in quiet mode
     echo "⚠️  SAILKIT: Worktree invariant violations detected!"
     echo ""
-    printf "$VIOLATION_MESSAGES"
+    for v in "${VIOLATIONS[@]}"; do
+        folder="${v%%:*}"
+        branch="${v#*:}"
+        echo "✗ VIOLATION: Base folder '$folder' is on '$branch' (expected: main)"
+    done
     echo ""
-    echo "Found $VIOLATIONS violation(s). Fix with: git -C <folder> checkout main"
-    exit 1
+    echo "Found ${#VIOLATIONS[@]} violation(s). Fix with: git -C <folder> checkout main"
 fi
+exit 0

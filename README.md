@@ -111,17 +111,19 @@ The Python harness provides:
 
 ## Hooks
 
-Sailkit can run checks automatically on session start. Add to `.claude/settings.json`:
+Sailkit integrates with Claude Code's hook system to check invariants before each action.
+
+Add to `.claude/settings.json`:
 
 ```json
 {
   "hooks": {
-    "SessionStart": [
+    "UserPromptSubmit": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/sailkit-dev/scripts/worktree-check --quiet"
+            "command": "\"$CLAUDE_PROJECT_DIR\"/sailkit-dev/scripts/worktree-check --json"
           }
         ]
       }
@@ -130,7 +132,15 @@ Sailkit can run checks automatically on session start. Add to `.claude/settings.
 }
 ```
 
-The `--quiet` flag suppresses output when all invariants pass. Violations are always reported.
+**How it works:**
+- Hook runs on every user prompt (before Claude responds)
+- `--json` outputs Claude Code hook format with `continue: true`
+- On violations, `systemMessage` tells Claude to ask the user whether to fix or proceed
+- Claude sees the context and can offer to run `git -C <folder> checkout main`
+
+**Flags:**
+- `--json`: Output JSON for Claude Code hooks (always exits 0)
+- `--quiet`: Suppress human-readable output on success (for manual runs)
 
 ## Slash Commands
 
@@ -143,6 +153,15 @@ After install, these slash commands are available:
 ## Future Ideas
 
 Documented for future consideration:
+
+### Agent Wrapper Script
+A wrapper script that runs pre-flight checks before launching any AI agent:
+```bash
+#!/bin/bash
+./sailkit-dev/scripts/worktree-check || { echo "Fix violations first"; exit 1; }
+exec "${SAILKIT_AGENT:-claude}" "$@"
+```
+Benefits: True blocking (refuses to start), portable across agents (Claude, Cursor, Aider), clear error display. Current hook approach works within Claude Code's system but cannot truly block session start.
 
 ### Workflow Automation
 - **worktree-push**: Push branch and optionally create PR

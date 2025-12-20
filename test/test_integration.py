@@ -190,6 +190,53 @@ class TestWorktreeCheck:
         assert result.success
         assert result.stdout.strip() == ""
 
+    def test_always_exits_zero(self, env: SailkitTestEnv):
+        """Script always exits 0 for hook compatibility."""
+        env.create_repo("test-repo")
+        env.run("worktree-register", "test-repo")
+        # Switch base to feature branch (violation)
+        import subprocess
+        subprocess.run(
+            ["git", "-C", str(env.root / "test-repo"), "checkout", "-b", "feature"],
+            capture_output=True, check=True
+        )
+        env.run("worktree-sync")  # Update manifest
+        result = env.run("worktree-check")
+
+        assert result.success  # Still exits 0
+
+    def test_json_output_no_violations(self, env: SailkitTestEnv):
+        """JSON mode outputs valid JSON with continue:true when no violations."""
+        import json
+        env.create_repo("test-repo")
+        env.run("worktree-register", "test-repo")
+        result = env.run("worktree-check", "--json")
+
+        assert result.success
+        data = json.loads(result.stdout)
+        assert data["continue"] is True
+        assert "systemMessage" not in data
+
+    def test_json_output_with_violations(self, env: SailkitTestEnv):
+        """JSON mode includes systemMessage when violations exist."""
+        import json
+        import subprocess
+        env.create_repo("test-repo")
+        env.run("worktree-register", "test-repo")
+        subprocess.run(
+            ["git", "-C", str(env.root / "test-repo"), "checkout", "-b", "feature"],
+            capture_output=True, check=True
+        )
+        env.run("worktree-sync")
+        result = env.run("worktree-check", "--json")
+
+        assert result.success
+        data = json.loads(result.stdout)
+        assert data["continue"] is True
+        assert "systemMessage" in data
+        assert "test-repo" in data["systemMessage"]
+        assert "feature" in data["systemMessage"]
+
 
 class TestEdgeCases:
     """Edge cases and error handling."""
