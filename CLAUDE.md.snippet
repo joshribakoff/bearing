@@ -4,33 +4,23 @@
 
 ## Rules
 
-1. **Base folders stay on main** - Check `./sailkit-dev/scripts/worktree-list` to see which folders are bases
+1. **Base folders stay on main** - Check `worktree-list` to see which folders are bases
 2. **Create worktrees for tasks** - Each task gets its own worktree
 3. **Never switch branches in base folders** - Use `worktree-new`, not `git checkout`
+4. **Commit parent after child** - After committing in a worktree, commit the parent project
 
 ## Commands
 
 ```bash
-# View all worktrees
-./sailkit-dev/scripts/worktree-list
-
-# Create worktree
-./sailkit-dev/scripts/worktree-new fightingwithai.com feature-branch --purpose "Add login"
-
-# Remove after merge
-./sailkit-dev/scripts/worktree-cleanup fightingwithai.com feature-branch
-
-# Sync manifest with git state
-./sailkit-dev/scripts/worktree-sync
+worktree-list                        # View all worktrees
+worktree-new myrepo feature-branch   # Create worktree
+worktree-cleanup myrepo feature-branch  # Remove after merge
+worktree-sync                        # Rebuild manifest from git
 ```
-
-## Manifest
-
-See `sailkit-dev/manifest.jsonl` for all tracked folders. Use scripts to interact—never edit directly.
 
 ## Recovery
 
 If you accidentally switch a base folder off main:
 ```bash
-git -C fightingwithai.com checkout main
+git -C myrepo checkout main
 ```

@@ -4,41 +4,34 @@ Use git worktrees to isolate tasks. Never switch branches in base folders.
 
 ## Rules
 
-1. **Base folders stay on main** - Folders marked `base:true` in the manifest must never switch branches
-2. **Create worktrees for tasks** - Use `./sailkit-dev/scripts/worktree-new`
-3. **Check the manifest** - Run `./sailkit-dev/scripts/worktree-list` to see all folders
-4. **Cleanup after merge** - Use `./sailkit-dev/scripts/worktree-cleanup`
+1. **Base folders stay on main** - Folders marked `base:true` must never switch branches
+2. **Create worktrees for tasks** - Use `worktree-new`
+3. **Check the manifest** - Run `worktree-list` to see all folders
+4. **Cleanup after merge** - Use `worktree-cleanup`
+5. **Commit parent after child** - After committing in a worktree, commit the parent project
 
 ## Commands
 
 ```bash
-# View all worktrees
-./sailkit-dev/scripts/worktree-list
-
-# Create worktree
-./sailkit-dev/scripts/worktree-new fightingwithai.com feature-branch --purpose "Add login"
-
-# Remove after merge
-./sailkit-dev/scripts/worktree-cleanup fightingwithai.com feature-branch
-
-# Rebuild manifest from git state
-./sailkit-dev/scripts/worktree-sync
+worktree-list                              # View all worktrees
+worktree-new myrepo feature-branch         # Create worktree
+worktree-cleanup myrepo feature-branch     # Remove after merge
+worktree-sync                              # Rebuild manifest from git
 ```
 
 ## Unsafe operations (NEVER do these)
 
 - `git checkout <branch>` in a base folder
 - `git switch <branch>` in a base folder
-- Editing `manifest.jsonl` directly
-- Working in another agent's worktree
+- Editing JSONL files directly
 
 ## Cross-repo tasks
 
-When a task spans repos (e.g., library + consuming site), create worktrees in both:
+When a task spans repos, create worktrees in both:
 
 ```bash
-./sailkit-dev/scripts/worktree-new bearing-dev feature-branch
-./sailkit-dev/scripts/worktree-new fightingwithai.com feature-branch
+worktree-new bearing-dev feature-branch
+worktree-new fightingwithai.com feature-branch
 ```
 
 ## Recovery
@@ -46,14 +39,5 @@ When a task spans repos (e.g., library + consuming site), create worktrees in bo
 If you accidentally switch a base folder off main:
 
 ```bash
-git -C fightingwithai.com checkout main
+git -C myrepo checkout main
 ```
-
-## Manifest
-
-The manifest (`sailkit-dev/manifest.jsonl`) tracks:
-- Which folders are bases vs worktrees
-- Branch ancestry (`basedOn`)
-- Purpose of each worktree
-
-Always use the scripts—never edit the manifest directly.

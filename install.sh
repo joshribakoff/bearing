@@ -2,18 +2,26 @@
 set -e
 
 SAILKIT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PARENT_DIR="$(dirname "$SAILKIT_DIR")"
 
 echo "Sailkit Installer"
 echo "================="
 echo ""
-echo "Sailkit enforces worktree-based workflows for parallel AI development."
+
+# Build Go binaries
+echo "Building Go binaries..."
+cd "$SAILKIT_DIR"
+mkdir -p bin
+
+for cmd in cmd/*/; do
+    name=$(basename "$cmd")
+    go build -o "bin/$name" "./$cmd"
+    echo "  Built: $name"
+done
+
+# Install skills
 echo ""
-
-# Detect parent directory (likely Projects folder)
-PARENT_DIR="$(dirname "$SAILKIT_DIR")"
-
 echo "Where should Sailkit skills be installed?"
-echo ""
 echo "  1) Project-level: $PARENT_DIR/.claude/skills (recommended)"
 echo "  2) Global: ~/.claude/skills"
 echo ""
@@ -27,39 +35,23 @@ else
 fi
 
 echo ""
-echo "This will create symlinks in: $TARGET_DIR"
-read -p "Continue? [Y/n]: " CONFIRM
+read -p "Install skills to $TARGET_DIR? [Y/n]: " CONFIRM
 CONFIRM="${CONFIRM:-Y}"
 
 if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
-    echo "Aborted."
-    exit 1
+    echo "Skipped skill installation."
+else
+    mkdir -p "$TARGET_DIR"
+    for skill_dir in "$SAILKIT_DIR/skills"/*/; do
+        skill_name=$(basename "$skill_dir")
+        SKILL_LINK="$TARGET_DIR/$skill_name"
+        [ -L "$SKILL_LINK" ] && rm "$SKILL_LINK"
+        [ -e "$SKILL_LINK" ] && { echo "Error: $SKILL_LINK exists"; exit 1; }
+        ln -s "$skill_dir" "$SKILL_LINK"
+        echo "  Linked: $skill_name"
+    done
 fi
 
-# Create target directory
-mkdir -p "$TARGET_DIR"
-
-# Create symlinks for all skills
-for skill_dir in "$SAILKIT_DIR/skills"/*/; do
-    skill_name=$(basename "$skill_dir")
-    SKILL_LINK="$TARGET_DIR/$skill_name"
-
-    if [ -L "$SKILL_LINK" ]; then
-        echo "Removing existing symlink: $SKILL_LINK"
-        rm "$SKILL_LINK"
-    elif [ -e "$SKILL_LINK" ]; then
-        echo "Error: $SKILL_LINK exists and is not a symlink"
-        exit 1
-    fi
-
-    ln -s "$skill_dir" "$SKILL_LINK"
-    echo "Created symlink: $SKILL_LINK -> $skill_dir"
-done
-
-# Add scripts to PATH suggestion
 echo ""
-echo "Done! To use worktree-* commands, add to your shell profile:"
-echo ""
-echo "  export PATH=\"\$PATH:$SAILKIT_DIR/scripts\""
-echo ""
-echo "Or invoke directly: $SAILKIT_DIR/scripts/worktree-new"
+echo "Done! Add to PATH:"
+echo "  export PATH=\"\$PATH:$SAILKIT_DIR/bin\""
