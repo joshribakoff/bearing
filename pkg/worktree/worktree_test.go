@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/sailkit-dev/sailkit-dev/pkg/worktree"
+	"github.com/bearing-dev/bearing/pkg/worktree"
 )
 
 type testEnv struct {
@@ -188,5 +188,31 @@ func TestIsMainBranch(t *testing.T) {
 	}
 	if worktree.IsMainBranch("feature") {
 		t.Error("feature should not be main branch")
+	}
+}
+
+func TestGitIsDirty(t *testing.T) {
+	env := newTestEnv(t)
+	env.createRepo("test-repo")
+
+	// Clean repo should not be dirty
+	dirty, err := env.git.IsDirty("test-repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dirty {
+		t.Error("clean repo should not be dirty")
+	}
+
+	// Add uncommitted file
+	repoPath := filepath.Join(env.root, "test-repo")
+	os.WriteFile(filepath.Join(repoPath, "new-file.txt"), []byte("content"), 0644)
+
+	dirty, err = env.git.IsDirty("test-repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !dirty {
+		t.Error("repo with uncommitted file should be dirty")
 	}
 }

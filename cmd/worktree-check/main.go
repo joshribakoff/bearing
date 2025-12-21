@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/sailkit-dev/sailkit-dev/pkg/worktree"
+	"github.com/bearing-dev/bearing/pkg/worktree"
 )
 
 type HookResponse struct {
@@ -37,14 +37,20 @@ func main() {
 			violations = append(violations,
 				fmt.Sprintf("'%s' is on '%s' (should be main)", entry.Folder, entry.Branch))
 		}
+		if entry.Base {
+			if dirty, _ := git.IsDirty(entry.Folder); dirty {
+				violations = append(violations,
+					fmt.Sprintf("'%s' has uncommitted changes", entry.Folder))
+			}
+		}
 	}
 
 	if *jsonMode {
 		resp := HookResponse{Continue: true}
 		if len(violations) > 0 {
 			resp.SystemMessage = fmt.Sprintf(
-				"SAILKIT WARNING: Base folders on wrong branch. %s. "+
-					"Ask user: fix with 'git -C <folder> checkout main' or proceed anyway?",
+				"BEARING WARNING: Base folder violation: %s. "+
+					"Ask user before proceeding.",
 				violations[0])
 		}
 		json.NewEncoder(os.Stdout).Encode(resp)
@@ -58,7 +64,7 @@ func main() {
 		return
 	}
 
-	fmt.Println("SAILKIT: Worktree invariant violations detected!")
+	fmt.Println("BEARING: Worktree invariant violations detected!")
 	for _, v := range violations {
 		fmt.Printf("  VIOLATION: Base folder %s\n", v)
 	}

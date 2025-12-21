@@ -105,3 +105,15 @@ func (g *Git) ListWorktrees(repo string) ([]string, error) {
 func IsMainBranch(branch string) bool {
 	return branch == "main" || branch == "master"
 }
+
+// IsDirty checks if a folder has uncommitted changes
+func (g *Git) IsDirty(folder string) (bool, error) {
+	path := filepath.Join(g.root, folder)
+	cmd := exec.Command("git", "status", "--porcelain")
+	cmd.Dir = path
+	output, err := cmd.Output()
+	if err != nil {
+		return false, err
+	}
+	return len(strings.TrimSpace(string(output))) > 0, nil
+}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/sailkit-dev/sailkit-dev/pkg/worktree"
+	"github.com/bearing-dev/bearing/pkg/worktree"
 )
 
 func main() {
