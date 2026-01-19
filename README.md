@@ -1,4 +1,4 @@
-# Sailkit
+# Bearing
 
 Worktree-based workflow for parallel AI-assisted development.
 
