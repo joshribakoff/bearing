@@ -8,12 +8,32 @@ When multiple AI agents work on the same codebase, they can step on each other i
 
 ## Install
 
+Clone bearing into your workspace folder alongside your other projects:
+
 ```bash
 git clone https://github.com/bearing-dev/bearing ~/Projects/bearing
 ~/Projects/bearing/install.sh
 ```
 
 The installer prompts for scope (project-level or global) and creates symlinks to Bearing's skills.
+
+## Workspace Layout
+
+Bearing assumes a flat workspace folder containing all your projects and worktrees:
+
+```
+~/Projects/                    # Your workspace root
+├── bearing/                   # Bearing itself (cloned here)
+├── myapp/                     # Base folder (stays on main)
+├── myapp-feature-auth/        # Worktree for auth feature
+├── myapp-fix-bug-123/         # Worktree for bug fix
+├── other-project/             # Another base folder
+├── other-project-refactor/    # Its worktree
+├── workflow.jsonl             # Workflow state (committable)
+└── local.jsonl                # Local worktree state
+```
+
+This scales well—workspaces with 100+ worktrees work fine. The flat structure makes it easy to see everything at a glance and lets multiple AI agents work in parallel without conflicts.
 
 ## Architecture
 
