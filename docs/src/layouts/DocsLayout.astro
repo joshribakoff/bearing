@@ -1,0 +1,189 @@
+---
+import { initScript } from 'sailkit/packages/lantern';
+import ThemeToggle from 'sailkit/packages/lantern/ThemeToggle.astro';
+import { getNeighbors } from 'sailkit/packages/compass';
+import Sidebar from '../components/Sidebar.astro';
+import PrevNext from '../components/PrevNext.astro';
+import { navigation } from '../navigation';
+
+interface Props {
+  title: string;
+  slug: string;
+}
+
+const { title, slug } = Astro.props;
+const { prev, next } = getNeighbors(navigation, slug, { leavesOnly: true });
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} - Bearing Docs</title>
+    <script is:inline set:html={initScript} />
+    <style is:global>
+      :root {
+        --color-bg: #ffffff;
+        --color-text: #1a1a2e;
+        --color-text-muted: #64748b;
+        --color-sidebar-bg: #f8fafc;
+        --color-border: #e2e8f0;
+        --color-accent: #059669;
+        --color-accent-hover: #047857;
+        --color-accent-dim: rgba(5, 150, 105, 0.1);
+        --color-code-bg: #f1f5f9;
+        --sidebar-width: 260px;
+        --header-height: 56px;
+      }
+
+      [data-theme="dark"] {
+        --color-bg: #0f172a;
+        --color-text: #f1f5f9;
+        --color-text-muted: #94a3b8;
+        --color-sidebar-bg: #1e293b;
+        --color-border: #334155;
+        --color-accent: #34d399;
+        --color-accent-hover: #6ee7b7;
+        --color-accent-dim: rgba(52, 211, 153, 0.15);
+        --color-code-bg: #1e293b;
+      }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      html {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: var(--color-bg);
+        color: var(--color-text);
+      }
+
+      body {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: var(--sidebar-width) 1fr;
+        grid-template-rows: var(--header-height) 1fr;
+        grid-template-areas: "sidebar header" "sidebar main";
+      }
+
+      .header {
+        grid-area: header;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 2rem;
+        border-bottom: 1px solid var(--color-border);
+        background: var(--color-bg);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .header-title { font-size: 1rem; font-weight: 600; }
+
+      .sidebar {
+        grid-area: sidebar;
+        background: var(--color-sidebar-bg);
+        border-right: 1px solid var(--color-border);
+        overflow-y: auto;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+      }
+
+      .sidebar-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--color-border);
+      }
+
+      .sidebar-logo {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--color-accent);
+        text-decoration: none;
+      }
+
+      .sidebar-logo:hover { color: var(--color-accent-hover); }
+
+      main {
+        grid-area: main;
+        padding: 2rem 3rem;
+        max-width: 800px;
+        overflow-y: auto;
+      }
+
+      .content { line-height: 1.7; }
+      .content h1 { font-size: 2rem; margin-bottom: 1.5rem; font-weight: 700; }
+      .content h2 { font-size: 1.375rem; margin-top: 2rem; margin-bottom: 0.75rem; font-weight: 600; border-bottom: 1px solid var(--color-border); padding-bottom: 0.5rem; }
+      .content h3 { font-size: 1.125rem; margin-top: 1.5rem; margin-bottom: 0.5rem; font-weight: 600; }
+      .content p { margin-bottom: 1rem; }
+      .content a { color: var(--color-accent); text-decoration: none; }
+      .content a:hover { text-decoration: underline; }
+      .content code { background: var(--color-code-bg); padding: 0.125rem 0.375rem; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.875em; }
+      .content pre { background: var(--color-code-bg); padding: 1rem; border-radius: 6px; overflow-x: auto; margin-bottom: 1rem; }
+      .content pre code { background: none; padding: 0; }
+      .content ul, .content ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+      .content li { margin-bottom: 0.5rem; }
+      .content table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; }
+      .content th, .content td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
+      .content th { font-weight: 600; background: var(--color-sidebar-bg); }
+
+      .hamburger { display: none; background: none; border: none; padding: 0.5rem; cursor: pointer; color: var(--color-text); }
+      .hamburger svg { width: 24px; height: 24px; }
+      .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 199; }
+
+      @media (max-width: 768px) {
+        body { grid-template-columns: 1fr; grid-template-areas: "header" "main"; }
+        .hamburger { display: block; }
+        .sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 200; transform: translateX(-100%); transition: transform 0.3s ease; }
+        .sidebar.open { transform: translateX(0); }
+        .sidebar-overlay.open { display: block; }
+        main { padding: 1.5rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="/docs/" class="sidebar-logo">Bearing</a>
+      </div>
+      <Sidebar currentSlug={slug} />
+    </aside>
+
+    <header class="header">
+      <button class="hamburger" id="hamburger" aria-label="Toggle navigation">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12h18M3 6h18M3 18h18" />
+        </svg>
+      </button>
+      <h1 class="header-title">{title}</h1>
+      <ThemeToggle />
+    </header>
+
+    <main>
+      <article class="content">
+        <slot />
+      </article>
+      <PrevNext prev={prev} next={next} />
+    </main>
+
+    <script>
+      const hamburger = document.getElementById('hamburger');
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+
+      function toggle() {
+        sidebar?.classList.toggle('open');
+        overlay?.classList.toggle('open');
+      }
+      function close() {
+        sidebar?.classList.remove('open');
+        overlay?.classList.remove('open');
+      }
+
+      hamburger?.addEventListener('click', toggle);
+      overlay?.addEventListener('click', close);
+      sidebar?.querySelectorAll('a').forEach(link => link.addEventListener('click', close));
+    </script>
+  </body>
+</html>

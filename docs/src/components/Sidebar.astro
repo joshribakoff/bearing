@@ -1,0 +1,114 @@
+---
+import { isBranch, getSlug } from 'sailkit/packages/compass';
+import type { NavItem } from 'sailkit/packages/compass';
+import { navigation, getTitle } from '../navigation';
+
+interface Props {
+  currentSlug: string;
+}
+
+const { currentSlug } = Astro.props;
+
+function isActive(slug: string): boolean {
+  return currentSlug === slug;
+}
+
+function isInSection(item: NavItem, targetSlug: string): boolean {
+  if (!isBranch(item)) return item === targetSlug;
+  if (item.slug === targetSlug) return true;
+  return item.children.some(child => isInSection(child, targetSlug));
+}
+---
+
+<nav class="nav">
+  {navigation.map((item) => {
+    const slug = getSlug(item);
+    const title = getTitle(slug);
+
+    if (isBranch(item)) {
+      const isOpen = isInSection(item, currentSlug);
+      return (
+        <div class="nav-section" data-open={isOpen}>
+          <a
+            href={`/docs/${slug}/`}
+            class:list={['nav-item', 'nav-section-header', { active: isActive(slug) }]}
+          >
+            <svg class="nav-chevron" width="16" height="16" viewBox="0 0 16 16">
+              <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+            </svg>
+            {title}
+          </a>
+          <div class="nav-children">
+            {item.children.map((child) => {
+              const childSlug = getSlug(child);
+              const childTitle = getTitle(childSlug);
+              return (
+                <a
+                  href={`/docs/${childSlug}/`}
+                  class:list={['nav-item', 'nav-child', { active: isActive(childSlug) }]}
+                >
+                  {childTitle}
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <a
+          href={`/docs/${slug}/`}
+          class:list={['nav-item', { active: isActive(slug) }]}
+        >
+          {title}
+        </a>
+      );
+    }
+  })}
+</nav>
+
+<style>
+  .nav { padding: 1rem 0; }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1.25rem;
+    color: var(--color-text);
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: background-color 0.15s, color 0.15s;
+  }
+
+  .nav-item:hover {
+    background: var(--color-accent-dim);
+    color: var(--color-accent);
+  }
+
+  .nav-item.active {
+    color: var(--color-accent);
+    font-weight: 500;
+    background: var(--color-accent-dim);
+  }
+
+  .nav-section-header { font-weight: 500; }
+
+  .nav-chevron { transition: transform 0.2s; flex-shrink: 0; }
+  .nav-section[data-open="true"] .nav-chevron { transform: rotate(90deg); }
+
+  .nav-children { display: none; padding-left: 0.5rem; }
+  .nav-section[data-open="true"] .nav-children { display: block; }
+
+  .nav-child { padding-left: 2.25rem; font-weight: 400; }
+  .nav-child::before {
+    content: '';
+    width: 4px;
+    height: 4px;
+    background: var(--color-border);
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+  }
+  .nav-child.active::before { background: var(--color-accent); }
+</style>
