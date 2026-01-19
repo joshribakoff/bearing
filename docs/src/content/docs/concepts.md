@@ -11,9 +11,9 @@ Bearing is built on a few simple concepts that work together.
 
 | Concept | Description |
 |---------|-------------|
-| [Base Folders](/docs/base-folders/) | Primary clones that stay on main |
-| [Worktrees](/docs/worktrees/) | Task-specific isolated directories |
-| [State Files](/docs/state-files/) | JSONL files tracking workspace state |
+| [Base Folders](/base-folders/) | Primary clones that stay on main |
+| [Worktrees](/worktrees/) | Task-specific isolated directories |
+| [State Files](/state-files/) | JSONL files tracking workspace state |
 
 ## Design Principles
 

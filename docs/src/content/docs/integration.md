@@ -11,8 +11,8 @@ Bearing integrates with AI coding tools to enforce worktree discipline automatic
 
 | Integration | Description |
 |-------------|-------------|
-| [Claude Code Hooks](/docs/claude-code-hooks/) | Pre-prompt validation |
-| [Slash Commands](/docs/slash-commands/) | Quick status checks |
+| [Claude Code Hooks](/claude-code-hooks/) | Pre-prompt validation |
+| [Slash Commands](/slash-commands/) | Quick status checks |
 
 ## Why Integrate?
 

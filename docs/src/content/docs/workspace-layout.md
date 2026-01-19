@@ -59,4 +59,4 @@ Two files track workspace state:
 | `workflow.jsonl` | Branches, purposes, relationships | Yes |
 | `local.jsonl` | Local folder paths | No |
 
-See [State Files](/docs/state-files/) for details.
+See [State Files](/state-files/) for details.

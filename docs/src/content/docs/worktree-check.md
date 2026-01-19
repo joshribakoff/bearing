@@ -58,4 +58,4 @@ Use with Claude Code hooks to check invariants before each action:
 }
 ```
 
-See [Claude Code Hooks](/docs/claude-code-hooks/) for details.
+See [Claude Code Hooks](/claude-code-hooks/) for details.

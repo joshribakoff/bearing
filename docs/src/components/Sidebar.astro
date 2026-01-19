@@ -30,7 +30,7 @@ function isInSection(item: NavItem, targetSlug: string): boolean {
       return (
         <div class="nav-section" data-open={isOpen}>
           <a
-            href={`/docs/${slug}/`}
+            href={`/${slug}/`}
             class:list={['nav-item', 'nav-section-header', { active: isActive(slug) }]}
           >
             <svg class="nav-chevron" width="16" height="16" viewBox="0 0 16 16">
@@ -44,7 +44,7 @@ function isInSection(item: NavItem, targetSlug: string): boolean {
               const childTitle = getTitle(childSlug);
               return (
                 <a
-                  href={`/docs/${childSlug}/`}
+                  href={`/${childSlug}/`}
                   class:list={['nav-item', 'nav-child', { active: isActive(childSlug) }]}
                 >
                   {childTitle}
@@ -57,7 +57,7 @@ function isInSection(item: NavItem, targetSlug: string): boolean {
     } else {
       return (
         <a
-          href={`/docs/${slug}/`}
+          href={`/${slug}/`}
           class:list={['nav-item', { active: isActive(slug) }]}
         >
           {title}
