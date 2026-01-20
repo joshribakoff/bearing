@@ -91,6 +91,23 @@ Run from your Projects folder:
 | `bearing daemon stop` | Stop daemon |
 | `bearing init` | Configure Claude Code hooks |
 
+## TUI
+
+A terminal UI for browsing worktrees, inspired by lazygit.
+
+![Bearing TUI](docs/public/images/tui-screenshot.svg)
+
+```bash
+# Install (Python 3.10+)
+cd ~/Projects/bearing-tui/tui
+make install-dev
+
+# Run
+bearing-tui
+```
+
+Press `?` for keybindings. `0`/`1`/`2` to switch panels, `j`/`k` to navigate, `q` to quit.
+
 ## State Files
 
 Bearing uses two state files in the workspace root:
