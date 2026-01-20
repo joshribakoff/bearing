@@ -70,10 +70,15 @@ Run from your Projects folder:
 |---------|-------------|
 | `./bearing/scripts/worktree-new <repo> <branch>` | Create worktree for branch |
 | `./bearing/scripts/worktree-cleanup <repo> <branch>` | Remove worktree after merge |
+| `./bearing/scripts/worktree-status` | Show health of all worktrees |
+| `./bearing/scripts/worktree-recover <base-folder>` | Fix base folder on wrong branch |
 | `./bearing/scripts/worktree-sync` | Rebuild manifest from git state |
 | `./bearing/scripts/worktree-list` | Display manifest as ASCII table |
 | `./bearing/scripts/worktree-register <folder>` | Register existing folder as base |
-| `./bearing/scripts/worktree-check` | Validate invariants (base folders on main) |
+| `./bearing/scripts/worktree-check` | Validate invariants, show health warnings |
+| `./bearing/scripts/plan-sync` | Sync plans with issue trackers |
+| `./bearing/scripts/plan-push <file>` | Push plan to issue tracker |
+| `./bearing/scripts/plan-pull <repo> <issue>` | Pull issue to local plan |
 
 ### Options
 
@@ -84,7 +89,7 @@ Run from your Projects folder:
 
 ## State Files
 
-Bearing uses two state files in the workspace root:
+Bearing uses three state files in the workspace root:
 
 **workflow.jsonl** (committable - portable across machines):
 ```jsonl
@@ -97,7 +102,37 @@ Bearing uses two state files in the workspace root:
 {"folder":"myrepo-feature","repo":"myrepo","branch":"feature","base":false}
 ```
 
+**health.jsonl** (not committed - cached health status):
+```jsonl
+{"folder":"myrepo-feature","dirty":true,"unpushed":2,"prState":"OPEN","lastCheck":"2026-01-19T10:00:00Z"}
+```
+
 Agents should interact via scripts, never edit these files directly.
+
+## Health Monitoring
+
+`worktree-status` shows the health of all worktrees:
+- **Dirty**: Uncommitted changes
+- **Unpushed**: Commits not pushed to remote
+- **Stale**: PR merged but worktree still exists
+- **Base violations**: Base folder not on main
+
+`worktree-recover` fixes base folders that accidentally switched off main, preserving uncommitted work.
+
+## Plan Sync
+
+Sync local markdown plans with issue trackers (GitHub, Linear, Jira).
+
+Plans live in `~/Projects/plans/<project>/` with frontmatter:
+```yaml
+---
+title: Feature name
+github_repo: user/repo
+github_issue: 42
+---
+```
+
+Uses adapter pattern - implement `adapters/github.sh`, `adapters/linear.sh`, etc.
 
 ## Config
 
