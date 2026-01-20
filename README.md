@@ -170,6 +170,105 @@ After install, these slash commands are available:
 |---------|-------------|
 | `/worktree-status` | Check invariants and display worktree table |
 
+## Plans (Lightweight Planning)
+
+Bearing includes a lightweight planning system for tracking work tied to GitHub issues. Plans are Markdown files stored in a top-level `plans/` folder and committed to version control.
+
+**Philosophy:**
+- Plans live alongside code in version control
+- Each plan links to a GitHub issue via frontmatter
+- Plans are human-readable and agent-readable
+- Committing plans creates an audit trail of decisions
+
+**Workspace layout:**
+```
+~/Projects/
+├── plans/
+│   ├── myrepo/
+│   │   ├── 123-add-auth.md      # Plan for issue #123
+│   │   └── 145-fix-perf.md      # Plan for issue #145
+│   └── other-repo/
+│       └── 42-refactor.md
+├── myrepo/
+├── myrepo-add-auth/             # Worktree for the plan
+└── workflow.jsonl
+```
+
+**Plan file format:**
+```markdown
+---
+issue: 123
+repo: myrepo
+status: in_progress
+---
+
+# Add Authentication
+
+## Context
+User needs to log in before accessing dashboard.
+
+## Approach
+1. Add OAuth provider
+2. Create session middleware
+3. Protect dashboard routes
+
+## Tasks
+- [x] Research OAuth libraries
+- [ ] Implement login flow
+- [ ] Add tests
+```
+
+**Commands:**
+```bash
+bearing plan pull myrepo 123      # Create plan from GitHub issue
+bearing plan push plans/myrepo/123.md  # Update issue from plan
+bearing plan sync --project myrepo     # Sync all plans for project
+```
+
+**Benefits:**
+- Plans persist across sessions (committed to git)
+- Multiple agents can reference the same plan
+- GitHub issue stays updated with progress
+- Easy to review plan changes in PRs
+
+## Daemon (Background Health Monitoring)
+
+Bearing includes an optional background daemon that periodically checks worktree health and caches the results.
+
+**What it does:**
+- Runs health checks every N seconds (default: 300s / 5 min)
+- Checks each worktree for: dirty state, unpushed commits, PR status
+- Writes results to `health.jsonl` for fast `worktree status --cached` queries
+- Respects rate limits (GitHub API calls are spaced out)
+
+**Files:**
+```
+~/.bearing/
+├── bearing.pid       # PID file (prevents duplicate daemons)
+└── daemon.log        # Daemon output log
+```
+
+**Commands:**
+```bash
+bearing daemon start              # Start in background
+bearing daemon start --foreground # Run in foreground (for debugging)
+bearing daemon start --interval 60  # Check every 60 seconds
+bearing daemon status             # Check if running
+bearing daemon status --json      # {"running": true, "pid": 12345}
+bearing daemon stop               # Send SIGTERM to stop
+```
+
+**PID file management:**
+- On start: checks if PID file exists and process is alive (refuses to double-start)
+- On run: writes current PID to file
+- On stop: removed automatically via `defer`
+- Stale PID files (process died) are detected and overwritten
+
+**Use cases:**
+- `worktree status --cached` returns instant results from `health.jsonl`
+- `worktree status --refresh` forces immediate check
+- Dashboard/notification integrations can watch `health.jsonl`
+
 ## Future Ideas
 
 Documented for future consideration:
