@@ -1,34 +1,57 @@
 """Project list widget for the left panel."""
 import re
-from textual.widgets import ListView, ListItem, Label
+from textual.widgets import ListView, ListItem, Static
 from textual.message import Message
-
-
-def _sanitize_id(name: str) -> str:
-    """Sanitize a name for use as a Textual ID."""
-    return re.sub(r"[^a-zA-Z0-9_-]", "_", name)
+from rich.text import Text
 
 
 class ProjectListItem(ListItem):
-    """ListItem that stores the original project name."""
+    """ListItem that stores the original project name and count."""
 
-    def __init__(self, project: str, **kwargs) -> None:
+    DEFAULT_CSS = """
+    ProjectListItem {
+        height: 1;
+        padding: 0 1;
+    }
+    ProjectListItem.--highlight {
+        background: #264f78;
+    }
+    ProjectListItem:focus.--highlight {
+        background: #2d5a8a;
+    }
+    """
+
+    def __init__(self, project: str, count: int = 0, **kwargs) -> None:
         super().__init__(**kwargs)
         self.project = project
+        self.count = count
+
+    def compose(self):
+        text = Text()
+        text.append(self.project)
+        if self.count > 0:
+            text.append(f" ({self.count})", style="dim cyan")
+        yield Static(text, markup=False)
 
 
 class ProjectList(ListView):
     """Left panel showing list of repos/projects."""
 
     DEFAULT_CSS = """
+    ProjectList {
+        background: #252526;
+    }
+    ProjectList > ProjectListItem.--highlight {
+        background: #264f78;
+    }
+    ProjectList:focus > ProjectListItem.--highlight {
+        background: #2d5a8a;
+    }
     ProjectList > ListItem.--highlight {
         background: #264f78;
-        color: white;
     }
     ProjectList:focus > ListItem.--highlight {
         background: #2d5a8a;
-        color: white;
-        text-style: bold;
     }
     """
 
@@ -41,25 +64,25 @@ class ProjectList(ListView):
     def __init__(self, projects: list[str] | None = None, **kwargs) -> None:
         super().__init__(**kwargs)
         self.projects = projects or []
+        self._counts: dict[str, int] = {}
 
     def compose(self):
-        # Don't yield anything here - set_projects will populate on mount
         return
-        yield  # Make this a generator
+        yield
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         """Handle selection and emit ProjectSelected message."""
         if isinstance(event.item, ProjectListItem):
             self.post_message(self.ProjectSelected(event.item.project))
 
-    def set_projects(self, projects: list[str]) -> None:
-        """Update the project list."""
+    def set_projects(self, projects: list[str], counts: dict[str, int] | None = None) -> None:
+        """Update the project list with optional worktree counts."""
         self.projects = projects
+        self._counts = counts or {}
         self.clear()
         if not projects:
-            self.append(ListItem(Label("No projects found")))
+            self.append(ListItem(Static("No projects found")))
         else:
             for project in projects:
-                item = ProjectListItem(project)
-                item.compose_add_child(Label(project))
-                self.append(item)
+                count = self._counts.get(project, 0)
+                self.append(ProjectListItem(project, count))

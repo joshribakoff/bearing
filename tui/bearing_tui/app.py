@@ -144,8 +144,15 @@ class BearingApp(App):
     def action_refresh(self) -> None:
         """Refresh data from files."""
         projects = self.state.get_projects()
+
+        # Count worktrees per project
+        local_entries = self.state.read_local()
+        counts: dict[str, int] = {}
+        for entry in local_entries:
+            counts[entry.repo] = counts.get(entry.repo, 0) + 1
+
         project_list = self.query_one(ProjectList)
-        project_list.set_projects(projects)
+        project_list.set_projects(projects, counts)
 
         # Clear worktree table and details
         worktree_table = self.query_one(WorktreeTable)
@@ -430,6 +437,14 @@ def main():
             app = BearingApp()
             async with app.run_test(size=(120, 30)) as pilot:
                 # Wait for data to load
+                await pilot.pause()
+                # Select first project to show worktrees
+                await pilot.press("enter")
+                await pilot.pause()
+                # Move to worktree panel and select first row
+                await pilot.press("1")
+                await pilot.press("j")
+                await pilot.press("j")
                 await pilot.pause()
                 # Save screenshot
                 app.save_screenshot(output_path)
