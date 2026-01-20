@@ -1,0 +1,39 @@
+Screen {
+    layout: grid;
+    grid-size: 1;
+    grid-rows: 1fr auto auto;
+}
+
+#main-container {
+    layout: horizontal;
+    height: 1fr;
+}
+
+#projects-panel {
+    width: 25%;
+    border: solid green;
+}
+
+#worktrees-panel {
+    width: 75%;
+    border: solid blue;
+}
+
+#details-panel {
+    height: 8;
+    border: solid yellow;
+}
+
+ProjectList {
+    background: $surface;
+}
+
+WorktreeTable {
+    background: $surface;
+}
+
+#footer-bar {
+    height: 1;
+    background: $panel;
+    padding: 0 1;
+}
