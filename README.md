@@ -1,5 +1,7 @@
 # Bearing
 
+> **Note:** Bearing is experimental software being developed live on my [vlog](https://youtube.com/@joshribakoff). Expect breaking changes.
+
 Worktree-based workflow for parallel AI-assisted development.
 
 ## Why
@@ -8,14 +10,23 @@ When multiple AI agents work on the same codebase, they can step on each other i
 
 ## Install
 
-Clone bearing into your workspace folder alongside your other projects:
-
+### From Source (Go 1.21+)
 ```bash
-git clone https://github.com/bearing-dev/bearing ~/Projects/bearing
-~/Projects/bearing/install.sh
+git clone https://github.com/joshribakoff/bearing ~/Projects/bearing
+cd ~/Projects/bearing
+go build -o bearing ./cmd/bearing
+sudo mv bearing /usr/local/bin/  # or add to PATH
+
+# Initialize hooks in your workspace
+cd ~/Projects
+bearing init
 ```
 
-The installer prompts for scope (project-level or global) and creates symlinks to Bearing's skills.
+### Verify
+```bash
+bearing --help
+bearing worktree list
+```
 
 ## Workspace Layout
 
@@ -37,21 +48,22 @@ This scales well—workspaces with 100+ worktrees work fine. The flat structure 
 
 ## Architecture
 
-Bearing leverages git's existing capabilities rather than duplicating them:
+Bearing is a Go binary with an optional background daemon for health monitoring:
 
 | Layer | Responsibility | Storage |
 |-------|---------------|---------|
 | **Git submodules** | Commit pointers, remotes, branch refs | `.gitmodules`, `.git/` |
 | **Manifest** | Workflow metadata cache (purposes, status) | `workflow.jsonl`, `local.jsonl` |
-| **Scripts** | Orchestration, guardrails | `bearing/scripts/` |
+| **CLI** | Orchestration, guardrails | `bearing` binary |
+| **Daemon** | Background health monitoring | Optional |
 
-**Design principle:** Git is the source of truth. The manifest is a cache of computed state plus workflow metadata. After a fresh clone, run `worktree-sync` to rebuild the manifest from git state.
+**Design principle:** Git is the source of truth. The manifest is a cache of computed state plus workflow metadata. After a fresh clone, run `bearing worktree sync` to rebuild the manifest from git state.
 
 **Fresh clone workflow:**
 ```bash
 git clone --recurse-submodules https://github.com/user/projects.git
 cd projects
-./bearing/scripts/worktree-sync  # Rebuild manifest from git
+bearing worktree sync  # Rebuild manifest from git
 ```
 
 ## Concepts
@@ -68,28 +80,20 @@ Run from your Projects folder:
 
 | Command | Description |
 |---------|-------------|
-| `./bearing/scripts/worktree-new <repo> <branch>` | Create worktree for branch |
-| `./bearing/scripts/worktree-cleanup <repo> <branch>` | Remove worktree after merge |
-| `./bearing/scripts/worktree-status` | Show health of all worktrees |
-| `./bearing/scripts/worktree-recover <base-folder>` | Fix base folder on wrong branch |
-| `./bearing/scripts/worktree-sync` | Rebuild manifest from git state |
-| `./bearing/scripts/worktree-list` | Display manifest as ASCII table |
-| `./bearing/scripts/worktree-register <folder>` | Register existing folder as base |
-| `./bearing/scripts/worktree-check` | Validate invariants, show health warnings |
-| `./bearing/scripts/plan-sync` | Sync plans with issue trackers |
-| `./bearing/scripts/plan-push <file>` | Push plan to issue tracker |
-| `./bearing/scripts/plan-pull <repo> <issue>` | Pull issue to local plan |
-
-### Options
-
-```bash
-# Create worktree with metadata
-./bearing/scripts/worktree-new myrepo feature-x --based-on develop --purpose "Add login"
-```
+| `bearing worktree new <repo> <branch>` | Create worktree for branch |
+| `bearing worktree cleanup <repo> <branch>` | Remove worktree after merge |
+| `bearing worktree sync` | Rebuild manifest from git state |
+| `bearing worktree list` | Display manifest as ASCII table |
+| `bearing worktree status` | Show health status (dirty, unpushed, PR) |
+| `bearing worktree check` | Validate invariants |
+| `bearing worktree register <folder>` | Register existing folder as base |
+| `bearing daemon start` | Start background health monitor |
+| `bearing daemon stop` | Stop daemon |
+| `bearing init` | Configure Claude Code hooks |
 
 ## State Files
 
-Bearing uses three state files in the workspace root:
+Bearing uses two state files in the workspace root:
 
 **workflow.jsonl** (committable - portable across machines):
 ```jsonl
@@ -102,84 +106,7 @@ Bearing uses three state files in the workspace root:
 {"folder":"myrepo-feature","repo":"myrepo","branch":"feature","base":false}
 ```
 
-**health.jsonl** (not committed - cached health status):
-```jsonl
-{"folder":"myrepo-feature","dirty":true,"unpushed":2,"prState":"OPEN","lastCheck":"2026-01-19T10:00:00Z"}
-```
-
-Agents should interact via scripts, never edit these files directly.
-
-## Health Monitoring
-
-`worktree-status` shows the health of all worktrees:
-- **Dirty**: Uncommitted changes
-- **Unpushed**: Commits not pushed to remote
-- **Stale**: PR merged but worktree still exists
-- **Base violations**: Base folder not on main
-
-`worktree-recover` fixes base folders that accidentally switched off main, preserving uncommitted work.
-
-## Plan Sync
-
-Sync local markdown plans with issue trackers (GitHub, Linear, Jira).
-
-Plans live in `~/Projects/plans/<project>/` with frontmatter:
-```yaml
----
-title: Feature name
-github_repo: user/repo
-github_issue: 42
----
-```
-
-Uses adapter pattern - implement `adapters/github.sh`, `adapters/linear.sh`, etc.
-
-## AI Features (Opt-in)
-
-Bearing can use Claude CLI (haiku model) for classification and summarization. **Disabled by default.**
-
-### Enable
-
-```bash
-# Option 1: Environment variable
-export BEARING_AI_ENABLED=1
-
-# Option 2: User config (~/.bearing)
-echo "ai_enabled: true" >> ~/.bearing
-
-# Option 3: Workspace config (.bearing.yaml)
-# ai:
-#   enabled: true
-```
-
-### Auto-Generated Purpose
-
-When creating worktrees, Bearing can auto-generate a purpose description from the branch name:
-
-```bash
-worktree-new myrepo feature-add-auth
-# Purpose auto-generated: "Add authentication flow"
-```
-
-Override with explicit `--purpose`:
-```bash
-worktree-new myrepo feature-add-auth --purpose "OAuth2 login"
-```
-
-### Available Commands
-
-| Command | Description |
-|---------|-------------|
-| `bearing-ai summarize` | Summarize input text |
-| `bearing-ai branch-purpose` | Generate purpose from branch name |
-| `bearing-ai classify-priority` | Classify as P0/P1/P2/P3 |
-| `bearing-ai suggest-fix` | Suggest commands to fix issues |
-
-### Requirements
-
-- Claude CLI (`claude`) installed and authenticated
-- Opt-in enabled via config or env var
-- Uses haiku model for cost efficiency (~$0.0001 per call)
+Agents should interact via the CLI, never edit these files directly.
 
 ## Config
 
@@ -198,18 +125,8 @@ state:
 ## Testing
 
 ```bash
-# Bash smoke tests (quick validation)
-./test/smoke-test.sh
-
-# Python integration tests (full coverage with mocking)
-cd test && python -m pytest test_integration.py -v
+go test ./...
 ```
-
-The Python harness provides:
-- Subprocess mocking for stdin/stdout (test like a user)
-- Isolated temp directory per test
-- Parallel test execution support (`pytest -n auto`)
-- Structured assertions on JSONL state files
 
 ## Hooks
 
@@ -225,7 +142,7 @@ Add to `.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/bearing/scripts/worktree-check --json"
+            "command": "bearing worktree check --json"
           }
         ]
       }
@@ -252,105 +169,6 @@ After install, these slash commands are available:
 |---------|-------------|
 | `/worktree-status` | Check invariants and display worktree table |
 
-## Plans (Lightweight Planning)
-
-Bearing includes a lightweight planning system for tracking work tied to GitHub issues. Plans are Markdown files stored in a top-level `plans/` folder and committed to version control.
-
-**Philosophy:**
-- Plans live alongside code in version control
-- Each plan links to a GitHub issue via frontmatter
-- Plans are human-readable and agent-readable
-- Committing plans creates an audit trail of decisions
-
-**Workspace layout:**
-```
-~/Projects/
-├── plans/
-│   ├── myrepo/
-│   │   ├── 123-add-auth.md      # Plan for issue #123
-│   │   └── 145-fix-perf.md      # Plan for issue #145
-│   └── other-repo/
-│       └── 42-refactor.md
-├── myrepo/
-├── myrepo-add-auth/             # Worktree for the plan
-└── workflow.jsonl
-```
-
-**Plan file format:**
-```markdown
----
-issue: 123
-repo: myrepo
-status: in_progress
----
-
-# Add Authentication
-
-## Context
-User needs to log in before accessing dashboard.
-
-## Approach
-1. Add OAuth provider
-2. Create session middleware
-3. Protect dashboard routes
-
-## Tasks
-- [x] Research OAuth libraries
-- [ ] Implement login flow
-- [ ] Add tests
-```
-
-**Commands:**
-```bash
-bearing plan pull myrepo 123      # Create plan from GitHub issue
-bearing plan push plans/myrepo/123.md  # Update issue from plan
-bearing plan sync --project myrepo     # Sync all plans for project
-```
-
-**Benefits:**
-- Plans persist across sessions (committed to git)
-- Multiple agents can reference the same plan
-- GitHub issue stays updated with progress
-- Easy to review plan changes in PRs
-
-## Daemon (Background Health Monitoring)
-
-Bearing includes an optional background daemon that periodically checks worktree health and caches the results.
-
-**What it does:**
-- Runs health checks every N seconds (default: 300s / 5 min)
-- Checks each worktree for: dirty state, unpushed commits, PR status
-- Writes results to `health.jsonl` for fast `worktree status --cached` queries
-- Respects rate limits (GitHub API calls are spaced out)
-
-**Files:**
-```
-~/.bearing/
-├── bearing.pid       # PID file (prevents duplicate daemons)
-└── daemon.log        # Daemon output log
-```
-
-**Commands:**
-```bash
-bearing daemon start              # Start in background
-bearing daemon start --foreground # Run in foreground (for debugging)
-bearing daemon start --interval 60  # Check every 60 seconds
-bearing daemon status             # Check if running
-bearing daemon status --json      # {"running": true, "pid": 12345}
-bearing daemon stop               # Send SIGTERM to stop
-```
-
-**PID file management:**
-- On start: checks if PID file exists and process is alive (refuses to double-start)
-- On run: writes current PID to file
-- On stop: removed automatically via `defer`
-- Stale PID files (process died) are detected and overwritten
-
-**Use cases:**
-- `worktree status --cached` returns instant results from `health.jsonl`
-- `worktree status --refresh` forces immediate check
-- Dashboard/notification integrations can watch `health.jsonl`
-
 ## Future Ideas
 
 Documented for future consideration:
@@ -359,7 +177,7 @@ Documented for future consideration:
 A wrapper script that runs pre-flight checks before launching any AI agent:
 ```bash
 #!/bin/bash
-./bearing/scripts/worktree-check || { echo "Fix violations first"; exit 1; }
+bearing worktree check || { echo "Fix violations first"; exit 1; }
 exec "${BEARING_AGENT:-claude}" "$@"
 ```
 Benefits: True blocking (refuses to start), portable across agents (Claude, Cursor, Aider), clear error display. Current hook approach works within Claude Code's system but cannot truly block session start.
@@ -371,7 +189,7 @@ Benefits: True blocking (refuses to start), portable across agents (Claude, Curs
 - **Auto-PR templates**: Configure PR body template in .bearing.yaml
 
 ### Validation & Safety
-- **Auto-fix with --force**: `worktree-check --fix` to checkout main on violating base folders
+- **Auto-fix with --force**: `bearing worktree check --fix` to checkout main on violating base folders
 - **Git hooks in repos**: Pre-checkout hooks to block unsafe branch switches
 - **Cross-repo coordination**: Track which agent owns which worktree
 
