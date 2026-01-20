@@ -1,0 +1,103 @@
+#!/bin/bash
+set -e
+
+# Pull issue from tracker to local plan
+# Usage: plan-pull <repo> <issue-number> [--output <file>]
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BEARING_DIR="$(dirname "$SCRIPT_DIR")"
+WORKSPACE_DIR="$(dirname "$BEARING_DIR")"
+
+source "$SCRIPT_DIR/adapters/interface.sh"
+
+REPO=""
+ISSUE=""
+OUTPUT=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --output|-o) OUTPUT="$2"; shift 2 ;;
+        *)
+            if [ -z "$REPO" ]; then
+                REPO="$1"
+            elif [ -z "$ISSUE" ]; then
+                ISSUE="$1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+if [ -z "$REPO" ] || [ -z "$ISSUE" ]; then
+    echo "Usage: plan-pull <repo> <issue-number> [--output <file>]"
+    echo "Example: plan-pull joshribakoff/sailkit 42"
+    exit 1
+fi
+
+# Load adapter
+load_adapter "$REPO"
+adapter_init
+
+# Fetch issue
+echo "Fetching issue #$ISSUE from $REPO..."
+data=$(adapter_get_issue "$REPO" "$ISSUE")
+
+if [ -z "$data" ] || [ "$data" = "null" ]; then
+    echo "Error: Issue not found"
+    exit 1
+fi
+
+title=$(echo "$data" | jq -r '.title')
+body=$(echo "$data" | jq -r '.body // ""')
+state=$(echo "$data" | jq -r '.state')
+labels=$(echo "$data" | jq -c '.labels')
+updated_at=$(echo "$data" | jq -r '.updated_at')
+
+# Determine status from state
+status="active"
+[ "$state" = "closed" ] && status="completed"
+
+# Generate filename if not specified
+if [ -z "$OUTPUT" ]; then
+    # Extract project name from repo
+    project=$(echo "$REPO" | sed 's|.*/||')
+
+    # Slugify title
+    slug=$(echo "$title" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-' | head -c 50)
+
+    # Find next number
+    plans_dir="$WORKSPACE_DIR/plans/$project"
+    mkdir -p "$plans_dir"
+
+    existing=$(ls "$plans_dir"/*.md 2>/dev/null | wc -l | tr -d ' ')
+    next_num=$(printf "%03d" $((existing + 1)))
+
+    OUTPUT="$plans_dir/${next_num}-${slug}.md"
+fi
+
+# Check if file exists and has this issue already
+if [ -f "$OUTPUT" ]; then
+    existing_issue=$(get_frontmatter "$OUTPUT" "github_issue")
+    if [ "$existing_issue" != "$ISSUE" ]; then
+        echo "Warning: File exists with different issue ($existing_issue)"
+        echo "Use --output to specify different file"
+        exit 1
+    fi
+fi
+
+# Write plan file
+mkdir -p "$(dirname "$OUTPUT")"
+cat > "$OUTPUT" <<EOF
+---
+title: $title
+github_issue: $ISSUE
+github_repo: $REPO
+status: $status
+labels: $labels
+synced_at: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+---
+
+$body
+EOF
+
+echo "✓ Pulled to $OUTPUT"

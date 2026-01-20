@@ -1,0 +1,169 @@
+#!/bin/bash
+set -e
+
+# Bidirectional sync between local plans and issue tracker
+# Usage: plan-sync [--project <name>] [--dry-run] [--prefer-remote]
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BEARING_DIR="$(dirname "$SCRIPT_DIR")"
+WORKSPACE_DIR="$(dirname "$BEARING_DIR")"
+PLANS_DIR="$WORKSPACE_DIR/plans"
+
+source "$SCRIPT_DIR/adapters/interface.sh"
+
+DRY_RUN=false
+PREFER_REMOTE=false
+PROJECT=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --dry-run) DRY_RUN=true; shift ;;
+        --prefer-remote) PREFER_REMOTE=true; shift ;;
+        --project|-p) PROJECT="$2"; shift 2 ;;
+        *) shift ;;
+    esac
+done
+
+# Convert ISO date to epoch for comparison
+date_to_epoch() {
+    local date_str="$1"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        date -j -f "%Y-%m-%dT%H:%M:%SZ" "$date_str" "+%s" 2>/dev/null || echo 0
+    else
+        date -d "$date_str" "+%s" 2>/dev/null || echo 0
+    fi
+}
+
+# Get file modification time as epoch
+file_mtime() {
+    local file="$1"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        stat -f %m "$file" 2>/dev/null || echo 0
+    else
+        stat -c %Y "$file" 2>/dev/null || echo 0
+    fi
+}
+
+echo "Plan Sync"
+echo "========="
+echo ""
+
+pushed=0
+pulled=0
+skipped=0
+errors=0
+
+# Find all plan files
+if [ -n "$PROJECT" ]; then
+    plan_dirs="$PLANS_DIR/$PROJECT"
+else
+    plan_dirs=$(find "$PLANS_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
+fi
+
+for project_dir in $plan_dirs; do
+    project=$(basename "$project_dir")
+
+    # Skip non-directories
+    [ ! -d "$project_dir" ] && continue
+
+    echo "Project: $project"
+
+    for file in "$project_dir"/*.md; do
+        [ ! -f "$file" ] && continue
+
+        filename=$(basename "$file")
+        title=$(get_frontmatter "$file" "title")
+        repo=$(get_frontmatter "$file" "github_repo")
+        issue=$(get_frontmatter "$file" "github_issue")
+        synced_at=$(get_frontmatter "$file" "synced_at")
+
+        # Skip files without frontmatter
+        [ -z "$title" ] && continue
+
+        # Skip files without repo configured
+        if [ -z "$repo" ]; then
+            echo "  ⊘ $filename (no repo configured)"
+            ((skipped++))
+            continue
+        fi
+
+        # Load adapter for this repo
+        load_adapter "$repo"
+        if ! adapter_init 2>/dev/null; then
+            echo "  ✗ $filename (adapter error)"
+            ((errors++))
+            continue
+        fi
+
+        if [ -z "$issue" ]; then
+            # No issue linked - push to create
+            echo "  → $filename (new)"
+            if [ "$DRY_RUN" = false ]; then
+                "$SCRIPT_DIR/plan-push" "$file" && ((pushed++)) || ((errors++))
+            else
+                ((pushed++))
+            fi
+            continue
+        fi
+
+        # Get remote issue data
+        remote=$(adapter_get_issue "$repo" "$issue" 2>/dev/null)
+        if [ -z "$remote" ] || [ "$remote" = "null" ]; then
+            echo "  ✗ $filename (issue #$issue not found)"
+            ((errors++))
+            continue
+        fi
+
+        remote_updated=$(echo "$remote" | jq -r '.updated_at')
+
+        # Compare timestamps
+        local_epoch=$(file_mtime "$file")
+        remote_epoch=$(date_to_epoch "$remote_updated")
+        synced_epoch=$(date_to_epoch "$synced_at")
+
+        # Determine direction
+        local_changed=$((local_epoch > synced_epoch))
+        remote_changed=$((remote_epoch > synced_epoch))
+
+        if [ "$local_changed" -eq 1 ] && [ "$remote_changed" -eq 1 ]; then
+            # Conflict
+            if [ "$PREFER_REMOTE" = true ]; then
+                echo "  ← $filename (conflict, prefer remote)"
+                if [ "$DRY_RUN" = false ]; then
+                    "$SCRIPT_DIR/plan-pull" "$repo" "$issue" --output "$file" && ((pulled++)) || ((errors++))
+                else
+                    ((pulled++))
+                fi
+            else
+                echo "  → $filename (conflict, prefer local)"
+                if [ "$DRY_RUN" = false ]; then
+                    "$SCRIPT_DIR/plan-push" "$file" && ((pushed++)) || ((errors++))
+                else
+                    ((pushed++))
+                fi
+            fi
+        elif [ "$local_changed" -eq 1 ]; then
+            echo "  → $filename (local newer)"
+            if [ "$DRY_RUN" = false ]; then
+                "$SCRIPT_DIR/plan-push" "$file" && ((pushed++)) || ((errors++))
+            else
+                ((pushed++))
+            fi
+        elif [ "$remote_changed" -eq 1 ]; then
+            echo "  ← $filename (remote newer)"
+            if [ "$DRY_RUN" = false ]; then
+                "$SCRIPT_DIR/plan-pull" "$repo" "$issue" --output "$file" && ((pulled++)) || ((errors++))
+            else
+                ((pulled++))
+            fi
+        else
+            echo "  ✓ $filename (in sync)"
+            ((skipped++))
+        fi
+    done
+
+    echo ""
+done
+
+echo "Summary: $pushed pushed, $pulled pulled, $skipped unchanged, $errors errors"
+[ "$DRY_RUN" = true ] && echo "(dry run - no changes made)"

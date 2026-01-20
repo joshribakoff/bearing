@@ -1,0 +1,99 @@
+#!/bin/bash
+set -e
+
+# Push local plan to issue tracker
+# Usage: plan-push <plan-file> [--dry-run]
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BEARING_DIR="$(dirname "$SCRIPT_DIR")"
+WORKSPACE_DIR="$(dirname "$BEARING_DIR")"
+
+source "$SCRIPT_DIR/adapters/interface.sh"
+
+DRY_RUN=false
+FILE=""
+
+for arg in "$@"; do
+    case $arg in
+        --dry-run) DRY_RUN=true ;;
+        *) [ -z "$FILE" ] && FILE="$arg" ;;
+    esac
+done
+
+if [ -z "$FILE" ] || [ ! -f "$FILE" ]; then
+    echo "Usage: plan-push <plan-file> [--dry-run]"
+    echo "Example: plan-push plans/sailkit/005-deployment.md"
+    exit 1
+fi
+
+# Parse frontmatter
+title=$(get_frontmatter "$FILE" "title")
+repo=$(get_frontmatter "$FILE" "github_repo")
+issue=$(get_frontmatter "$FILE" "github_issue")
+labels=$(get_frontmatter "$FILE" "labels" | tr -d '[]' | tr ',' ' ' | xargs | tr ' ' ',')
+[ -z "$labels" ] && labels="plan"
+
+if [ -z "$title" ]; then
+    echo "Error: Missing 'title' in frontmatter"
+    exit 1
+fi
+
+if [ -z "$repo" ]; then
+    # Try to infer from path: plans/<project>/xxx.md
+    project=$(echo "$FILE" | sed -n 's|.*plans/\([^/]*\)/.*|\1|p')
+    if [ -n "$project" ]; then
+        # Check if we can find the repo
+        repo=$(gh repo list --json nameWithOwner --limit 100 -q ".[].nameWithOwner" 2>/dev/null | grep -i "/$project$" | head -1)
+    fi
+
+    if [ -z "$repo" ]; then
+        echo "Error: Missing 'github_repo' in frontmatter and couldn't infer"
+        exit 1
+    fi
+    echo "Inferred repo: $repo"
+fi
+
+# Load adapter
+load_adapter "$repo"
+adapter_init
+
+# Get body (strip frontmatter)
+body=$(get_body "$FILE")
+
+if [ "$DRY_RUN" = true ]; then
+    echo "DRY RUN"
+    echo "  File: $FILE"
+    echo "  Repo: $repo"
+    echo "  Title: $title"
+    echo "  Issue: ${issue:-<new>}"
+    echo "  Labels: $labels"
+    echo "  Body: $(echo "$body" | head -3)..."
+    exit 0
+fi
+
+if [ -z "$issue" ]; then
+    # Create new issue
+    echo "Creating issue in $repo..."
+    issue=$(adapter_create_issue "$repo" "$title" "$body" "$labels")
+
+    if [ -z "$issue" ]; then
+        echo "Error: Failed to create issue"
+        exit 1
+    fi
+
+    # Update frontmatter with issue number and repo
+    set_frontmatter "$FILE" "github_issue" "$issue"
+    set_frontmatter "$FILE" "github_repo" "$repo"
+    set_frontmatter "$FILE" "synced_at" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+    echo "✓ Created issue #$issue"
+    echo "  https://github.com/$repo/issues/$issue"
+else
+    # Update existing issue
+    echo "Updating issue #$issue in $repo..."
+    adapter_update_issue "$repo" "$issue" "$title" "$body"
+
+    set_frontmatter "$FILE" "synced_at" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+    echo "✓ Updated issue #$issue"
+fi

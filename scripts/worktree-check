@@ -21,6 +21,8 @@ for arg in "$@"; do
 done
 
 VIOLATIONS=()
+HEALTH_WARNINGS=()
+HEALTH_FILE="$WORKSPACE_DIR/health.jsonl"
 
 # First sync to get current state
 "$SCRIPT_DIR/worktree-sync" > /dev/null 2>&1
@@ -39,31 +41,50 @@ if [ -f "$LOCAL_FILE" ]; then
     done < "$LOCAL_FILE"
 fi
 
+# Check health cache for warnings (stale PRs, unpushed commits)
+if [ -f "$HEALTH_FILE" ]; then
+    stale_count=$(grep -c '"prState":"MERGED"' "$HEALTH_FILE" 2>/dev/null) || stale_count=0
+    unpushed_count=$(grep -c '"unpushed":[1-9]' "$HEALTH_FILE" 2>/dev/null) || unpushed_count=0
+
+    [ "$stale_count" -gt 0 ] 2>/dev/null && HEALTH_WARNINGS+=("$stale_count stale worktrees (PR merged)")
+    [ "$unpushed_count" -gt 0 ] 2>/dev/null && HEALTH_WARNINGS+=("$unpushed_count worktrees with unpushed commits")
+fi
+
 if [ "$JSON" = true ]; then
     # Output JSON for Claude Code hooks
-    if [ ${#VIOLATIONS[@]} -eq 0 ]; then
+    if [ ${#VIOLATIONS[@]} -eq 0 ] && [ ${#HEALTH_WARNINGS[@]} -eq 0 ]; then
         cat <<'EOF'
 {
   "continue": true
 }
 EOF
     else
-        # Build violation list
-        VIOLATION_TEXT="SAILKIT WARNING: Base folders on wrong branch. "
-        for v in "${VIOLATIONS[@]}"; do
-            folder="${v%%:*}"
-            branch="${v#*:}"
-            VIOLATION_TEXT+="'$folder' is on '$branch' (should be main). "
-        done
-        VIOLATION_TEXT+="Ask user: fix with 'git -C <folder> checkout main' or proceed anyway?"
+        # Build message
+        MSG=""
+        if [ ${#VIOLATIONS[@]} -gt 0 ]; then
+            MSG+="BEARING WARNING: Base folders on wrong branch. "
+            for v in "${VIOLATIONS[@]}"; do
+                folder="${v%%:*}"
+                branch="${v#*:}"
+                MSG+="'$folder' is on '$branch' (should be main). "
+            done
+            MSG+="Fix with 'worktree-recover <folder>'. "
+        fi
+        if [ ${#HEALTH_WARNINGS[@]} -gt 0 ]; then
+            MSG+="Health issues: "
+            for w in "${HEALTH_WARNINGS[@]}"; do
+                MSG+="$w. "
+            done
+            MSG+="Run 'worktree-status' for details."
+        fi
 
         # Escape for JSON
-        VIOLATION_TEXT=$(echo "$VIOLATION_TEXT" | sed 's/"/\\"/g')
+        MSG=$(echo "$MSG" | sed 's/"/\\"/g')
 
         cat <<EOF
 {
   "continue": true,
-  "systemMessage": "$VIOLATION_TEXT"
+  "systemMessage": "$MSG"
 }
 EOF
     fi
@@ -71,19 +92,30 @@ EOF
 fi
 
 # Human-readable output
-if [ ${#VIOLATIONS[@]} -eq 0 ]; then
+if [ ${#VIOLATIONS[@]} -eq 0 ] && [ ${#HEALTH_WARNINGS[@]} -eq 0 ]; then
     if [ "$QUIET" = false ]; then
         echo "✓ All invariants satisfied"
     fi
 else
-    echo "⚠️  SAILKIT: Worktree invariant violations detected!"
-    echo ""
-    for v in "${VIOLATIONS[@]}"; do
-        folder="${v%%:*}"
-        branch="${v#*:}"
-        echo "✗ VIOLATION: Base folder '$folder' is on '$branch' (expected: main)"
-    done
-    echo ""
-    echo "Found ${#VIOLATIONS[@]} violation(s). Fix with: git -C <folder> checkout main"
+    if [ ${#VIOLATIONS[@]} -gt 0 ]; then
+        echo "⚠️  BEARING: Worktree invariant violations detected!"
+        echo ""
+        for v in "${VIOLATIONS[@]}"; do
+            folder="${v%%:*}"
+            branch="${v#*:}"
+            echo "✗ VIOLATION: Base folder '$folder' is on '$branch' (expected: main)"
+        done
+        echo ""
+        echo "Fix with: worktree-recover <folder>"
+        echo ""
+    fi
+    if [ ${#HEALTH_WARNINGS[@]} -gt 0 ]; then
+        echo "⚠️  Health warnings:"
+        for w in "${HEALTH_WARNINGS[@]}"; do
+            echo "  - $w"
+        done
+        echo ""
+        echo "Run 'worktree-status' for details"
+    fi
 fi
 exit 0
