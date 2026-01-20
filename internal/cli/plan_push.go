@@ -7,7 +7,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/spf13/cobra"
 )
@@ -73,6 +75,33 @@ func runPlanPush(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// stripQuotes removes leading/trailing single or double quotes from a string.
+func stripQuotes(s string) string {
+	if len(s) >= 2 {
+		if (s[0] == '"' && s[len(s)-1] == '"') || (s[0] == '\'' && s[len(s)-1] == '\'') {
+			return s[1 : len(s)-1]
+		}
+	}
+	return s
+}
+
+// containsControlChars checks if a string contains null bytes or other control characters.
+func containsControlChars(s string) bool {
+	for _, r := range s {
+		if r == 0 || (unicode.IsControl(r) && r != '\t') {
+			return true
+		}
+	}
+	return false
+}
+
+// isNumeric checks if a string contains only digits.
+var numericRegex = regexp.MustCompile(`^\d+$`)
+
+func isNumeric(s string) bool {
+	return numericRegex.MatchString(s)
+}
+
 func parsePlanFile(path string) (*planFrontmatter, string, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -86,6 +115,10 @@ func parsePlanFile(path string) (*planFrontmatter, string, error) {
 	frontmatterDone := false
 
 	scanner := bufio.NewScanner(f)
+	// Bug 1 fix: Increase buffer size to handle long lines (up to 1MB)
+	buf := make([]byte, 64*1024)
+	scanner.Buffer(buf, 1024*1024)
+
 	for scanner.Scan() {
 		line := scanner.Text()
 
@@ -105,8 +138,18 @@ func parsePlanFile(path string) (*planFrontmatter, string, error) {
 			if len(parts) == 2 {
 				key := strings.TrimSpace(parts[0])
 				val := strings.TrimSpace(parts[1])
+				// Bug 2 fix: Strip quotes from frontmatter values
+				val = stripQuotes(val)
+				// Bug 4 fix: Reject null bytes and control characters
+				if containsControlChars(val) {
+					return nil, "", fmt.Errorf("frontmatter field %q contains invalid control characters", key)
+				}
 				switch key {
 				case "issue":
+					// Bug 3 fix: Validate issue number is numeric
+					if !isNumeric(val) {
+						return nil, "", fmt.Errorf("issue must be numeric, got: %q", val)
+					}
 					fm.Issue = val
 				case "repo":
 					fm.Repo = val
