@@ -1,0 +1,168 @@
+#!/bin/bash
+
+# bearing-ai: Claude CLI wrapper for classification and summarization
+# DISABLED BY DEFAULT - must opt-in via config or env var
+#
+# Usage: bearing-ai <command> [args] < input
+#        echo "text" | bearing-ai summarize
+#        bearing-ai classify-priority < plan.md
+#
+# Commands:
+#   summarize         - Summarize input in 2-3 sentences
+#   classify-priority - Output P0/P1/P2/P3
+#   suggest-fix       - Suggest commands to fix issues
+#   commit-message    - Generate commit message from diff
+#   pr-ready          - Check if PR is ready (ready/draft/blocked)
+#   branch-purpose    - Generate purpose from branch name + recent commits
+#   <custom>          - Use as custom prompt
+#
+# Enable via:
+#   1. Environment: BEARING_AI_ENABLED=1
+#   2. Config file: ~/.bearing with "ai_enabled: true"
+#   3. Workspace config: .bearing.yaml with "ai: { enabled: true }"
+#
+# Environment:
+#   BEARING_AI_ENABLED - Set to 1 to enable (default: disabled)
+#   BEARING_AI_MODEL   - Model to use (default: haiku)
+#   BEARING_AI_DRY     - If set, print prompt instead of calling Claude
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BEARING_DIR="$(dirname "$SCRIPT_DIR")"
+WORKSPACE_DIR="$(dirname "$BEARING_DIR")"
+MODEL="${BEARING_AI_MODEL:-haiku}"
+MAX_INPUT=4000  # Truncate input to avoid huge token counts
+
+# Check if AI is enabled
+ai_enabled="${BEARING_AI_ENABLED:-0}"
+
+# Check config files for opt-in
+if [ "$ai_enabled" != "1" ]; then
+    # Check ~/.bearing
+    if [ -f "$HOME/.bearing" ] && grep -q "ai_enabled.*true" "$HOME/.bearing" 2>/dev/null; then
+        ai_enabled=1
+    fi
+    # Check workspace .bearing.yaml
+    if [ -f "$WORKSPACE_DIR/.bearing.yaml" ] && grep -q "enabled.*true" "$WORKSPACE_DIR/.bearing.yaml" 2>/dev/null; then
+        ai_enabled=1
+    fi
+fi
+
+if [ "$ai_enabled" != "1" ]; then
+    # Silently pass through - AI not enabled
+    if [ ! -t 0 ]; then
+        cat
+    fi
+    exit 0
+fi
+
+# Check if Claude CLI is available
+if ! command -v claude &>/dev/null; then
+    # Graceful degradation - pass through or exit silently
+    if [ -t 0 ]; then
+        echo "Warning: claude CLI not found" >&2
+        exit 0
+    else
+        cat  # Pass through stdin unchanged
+        exit 0
+    fi
+fi
+
+command="$1"
+shift
+
+if [ -z "$command" ]; then
+    echo "Usage: bearing-ai <command> [args] < input"
+    echo "Commands: summarize, classify-priority, suggest-fix, commit-message, pr-ready"
+    exit 1
+fi
+
+# Read and truncate input
+input=""
+if [ ! -t 0 ]; then
+    input=$(head -c "$MAX_INPUT")
+    if [ ${#input} -eq "$MAX_INPUT" ]; then
+        input="$input...[truncated]"
+    fi
+fi
+
+# Build prompt based on command
+case "$command" in
+    summarize)
+        prompt="Summarize concisely in 2-3 sentences. Focus on actionable items:"
+        max_tokens=200
+        ;;
+
+    classify-priority)
+        prompt="Classify priority based on urgency and impact.
+P0 = Critical, blocking, security issue
+P1 = High priority, affects users
+P2 = Medium, should do soon
+P3 = Low, nice to have
+
+Output ONLY one of: P0, P1, P2, P3"
+        max_tokens=10
+        ;;
+
+    suggest-fix)
+        prompt="Given these workflow issues, suggest specific shell commands to fix them.
+Format each as a code block. Be concise. Prioritize by impact."
+        max_tokens=400
+        ;;
+
+    commit-message)
+        prompt="Generate a git commit message for these changes.
+- First line: imperative mood, under 50 chars, no period
+- If needed, blank line then brief body
+- No quotes around the message
+- Focus on WHY not WHAT"
+        max_tokens=150
+        ;;
+
+    pr-ready)
+        prompt="Analyze this PR and determine if it's ready for review.
+Consider: description completeness, test coverage mentions, TODOs.
+Output ONLY one of: ready, draft, blocked"
+        max_tokens=20
+        ;;
+
+    health-summary)
+        prompt="Analyze this worktree health report and provide:
+1. Most urgent issue to address first
+2. Quick wins (easy fixes)
+3. Can ignore for now
+Be concise, use bullet points."
+        max_tokens=300
+        ;;
+
+    branch-purpose)
+        prompt="Generate a brief purpose description (under 50 chars) for this git branch.
+Input is: branch name, recent commit messages.
+Output ONLY the purpose text, no quotes, no explanation.
+Example: 'Add user authentication flow'"
+        max_tokens=50
+        ;;
+
+    *)
+        # Custom prompt - use command as the prompt
+        prompt="$command $*"
+        max_tokens=200
+        ;;
+esac
+
+# Dry run mode - just print what we would do
+if [ -n "$BEARING_AI_DRY" ]; then
+    echo "=== DRY RUN ==="
+    echo "Model: $MODEL"
+    echo "Max tokens: $max_tokens"
+    echo "Prompt: $prompt"
+    echo "Input (${#input} chars):"
+    echo "$input" | head -20
+    exit 0
+fi
+
+# Call Claude
+if [ -n "$input" ]; then
+    echo "$input" | claude --model "$MODEL" --max-tokens "$max_tokens" "$prompt"
+else
+    claude --model "$MODEL" --max-tokens "$max_tokens" "$prompt"
+fi

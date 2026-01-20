@@ -59,6 +59,15 @@ fi
 
 TIMESTAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
+# Auto-generate purpose if not provided and AI is enabled
+if [ -z "$PURPOSE" ]; then
+    # Try to generate from branch name using AI (opt-in only)
+    AI_PURPOSE=$("$SCRIPT_DIR/bearing-ai" branch-purpose <<< "Branch: $BRANCH" 2>/dev/null)
+    if [ -n "$AI_PURPOSE" ] && [ "$AI_PURPOSE" != "Branch: $BRANCH" ]; then
+        PURPOSE="$AI_PURPOSE"
+    fi
+fi
+
 echo "Creating worktree: $WORKTREE_DIR"
 git -C "$REPO_DIR" worktree add "$WORKTREE_DIR" "$BRANCH" 2>/dev/null || \
 git -C "$REPO_DIR" worktree add -b "$BRANCH" "$WORKTREE_DIR" "$BASED_ON"
