@@ -55,4 +55,4 @@ bearing worktree sync
 └── workflow.jsonl        # Tracks active work across all repos
 ```
 
-All projects live in one flat workspace. Base folders stay on `main`. Worktrees are created for each task. This scales to 100+ worktrees across dozens of repos.
+All projects live in one flat workspace. Base folders stay on `main`. Worktrees are created for each task. This scales to thousands of worktrees across hundreds of repos.
