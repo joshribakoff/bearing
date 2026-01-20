@@ -432,37 +432,35 @@ def _create_mock_workspace():
     tmpdir = Path(tempfile.mkdtemp(prefix="bearing-screenshot-"))
 
     # Mock local.jsonl - impressive scale with many projects and worktrees
+    # Note: Projects are sorted alphabetically, so "acme-web" comes first
     local_data = [
-        # frontend - 8 worktrees
-        {"folder": "frontend", "repo": "frontend", "branch": "main", "base": True},
-        {"folder": "frontend-feature-auth", "repo": "frontend", "branch": "feature-auth", "base": False},
-        {"folder": "frontend-fix-nav", "repo": "frontend", "branch": "fix-nav", "base": False},
-        {"folder": "frontend-perf-images", "repo": "frontend", "branch": "perf-images", "base": False},
-        {"folder": "frontend-redesign-v2", "repo": "frontend", "branch": "redesign-v2", "base": False},
-        {"folder": "frontend-a11y-audit", "repo": "frontend", "branch": "a11y-audit", "base": False},
-        {"folder": "frontend-dark-mode", "repo": "frontend", "branch": "dark-mode", "base": False},
-        {"folder": "frontend-i18n", "repo": "frontend", "branch": "i18n", "base": False},
-        # api-server - 5 worktrees
-        {"folder": "api-server", "repo": "api-server", "branch": "main", "base": True},
-        {"folder": "api-server-graphql", "repo": "api-server", "branch": "graphql", "base": False},
-        {"folder": "api-server-rate-limit", "repo": "api-server", "branch": "rate-limit", "base": False},
-        {"folder": "api-server-caching", "repo": "api-server", "branch": "caching", "base": False},
-        {"folder": "api-server-logging", "repo": "api-server", "branch": "logging", "base": False},
-        # mobile-app - 4 worktrees
-        {"folder": "mobile-app", "repo": "mobile-app", "branch": "main", "base": True},
-        {"folder": "mobile-app-push-notif", "repo": "mobile-app", "branch": "push-notif", "base": False},
-        {"folder": "mobile-app-offline", "repo": "mobile-app", "branch": "offline", "base": False},
-        {"folder": "mobile-app-biometric", "repo": "mobile-app", "branch": "biometric", "base": False},
+        # acme-web - 8 worktrees (main showcase project, first alphabetically)
+        {"folder": "acme-web", "repo": "acme-web", "branch": "main", "base": True},
+        {"folder": "acme-web-feature-auth", "repo": "acme-web", "branch": "feature-auth", "base": False},
+        {"folder": "acme-web-fix-checkout", "repo": "acme-web", "branch": "fix-checkout", "base": False},
+        {"folder": "acme-web-perf-images", "repo": "acme-web", "branch": "perf-images", "base": False},
+        {"folder": "acme-web-redesign-v2", "repo": "acme-web", "branch": "redesign-v2", "base": False},
+        {"folder": "acme-web-dark-mode", "repo": "acme-web", "branch": "dark-mode", "base": False},
+        {"folder": "acme-web-i18n", "repo": "acme-web", "branch": "i18n", "base": False},
+        {"folder": "acme-web-analytics", "repo": "acme-web", "branch": "analytics", "base": False},
+        # acme-api - 5 worktrees
+        {"folder": "acme-api", "repo": "acme-api", "branch": "main", "base": True},
+        {"folder": "acme-api-graphql", "repo": "acme-api", "branch": "graphql", "base": False},
+        {"folder": "acme-api-rate-limit", "repo": "acme-api", "branch": "rate-limit", "base": False},
+        {"folder": "acme-api-caching", "repo": "acme-api", "branch": "caching", "base": False},
+        {"folder": "acme-api-webhooks", "repo": "acme-api", "branch": "webhooks", "base": False},
+        # acme-mobile - 4 worktrees
+        {"folder": "acme-mobile", "repo": "acme-mobile", "branch": "main", "base": True},
+        {"folder": "acme-mobile-push", "repo": "acme-mobile", "branch": "push-notif", "base": False},
+        {"folder": "acme-mobile-offline", "repo": "acme-mobile", "branch": "offline", "base": False},
+        {"folder": "acme-mobile-biometric", "repo": "acme-mobile", "branch": "biometric", "base": False},
         # infra - 3 worktrees
         {"folder": "infra", "repo": "infra", "branch": "main", "base": True},
-        {"folder": "infra-k8s-upgrade", "repo": "infra", "branch": "k8s-upgrade", "base": False},
+        {"folder": "infra-k8s", "repo": "infra", "branch": "k8s-upgrade", "base": False},
         {"folder": "infra-monitoring", "repo": "infra", "branch": "monitoring", "base": False},
         # shared-libs
         {"folder": "shared-libs", "repo": "shared-libs", "branch": "main", "base": True},
         {"folder": "shared-libs-types", "repo": "shared-libs", "branch": "types", "base": False},
-        # docs
-        {"folder": "docs", "repo": "docs", "branch": "main", "base": True},
-        {"folder": "docs-api-ref", "repo": "docs", "branch": "api-ref", "base": False},
     ]
     with open(tmpdir / "local.jsonl", "w") as f:
         for entry in local_data:
@@ -470,34 +468,33 @@ def _create_mock_workspace():
 
     # Mock workflow.jsonl with purposes
     workflow_data = [
-        {"repo": "frontend", "branch": "feature-auth", "basedOn": "main", "purpose": "Add OAuth2 login flow", "status": "in_progress", "created": "2026-01-15T10:00:00Z"},
-        {"repo": "frontend", "branch": "fix-nav", "basedOn": "main", "purpose": "Fix mobile nav collapse", "status": "in_progress", "created": "2026-01-18T14:30:00Z"},
-        {"repo": "frontend", "branch": "perf-images", "basedOn": "main", "purpose": "Lazy load images", "status": "in_progress", "created": "2026-01-17T09:00:00Z"},
-        {"repo": "frontend", "branch": "redesign-v2", "basedOn": "main", "purpose": "New design system", "status": "in_progress", "created": "2026-01-10T11:00:00Z"},
-        {"repo": "frontend", "branch": "a11y-audit", "basedOn": "main", "purpose": "WCAG 2.1 compliance", "status": "in_progress", "created": "2026-01-12T08:00:00Z"},
-        {"repo": "frontend", "branch": "dark-mode", "basedOn": "main", "purpose": "Add dark theme", "status": "in_progress", "created": "2026-01-14T16:00:00Z"},
-        {"repo": "frontend", "branch": "i18n", "basedOn": "main", "purpose": "Internationalization", "status": "in_progress", "created": "2026-01-16T10:00:00Z"},
-        {"repo": "api-server", "branch": "graphql", "basedOn": "main", "purpose": "GraphQL API layer", "status": "in_progress", "created": "2026-01-08T09:00:00Z"},
-        {"repo": "api-server", "branch": "rate-limit", "basedOn": "main", "purpose": "Add rate limiting", "status": "in_progress", "created": "2026-01-11T13:00:00Z"},
-        {"repo": "api-server", "branch": "caching", "basedOn": "main", "purpose": "Redis caching layer", "status": "in_progress", "created": "2026-01-13T15:00:00Z"},
-        {"repo": "mobile-app", "branch": "push-notif", "basedOn": "main", "purpose": "Push notifications", "status": "in_progress", "created": "2026-01-09T10:00:00Z"},
+        {"repo": "acme-web", "branch": "feature-auth", "basedOn": "main", "purpose": "Add OAuth2 login", "status": "in_progress", "created": "2026-01-15T10:00:00Z"},
+        {"repo": "acme-web", "branch": "fix-checkout", "basedOn": "main", "purpose": "Fix cart bug #42", "status": "in_progress", "created": "2026-01-18T14:30:00Z"},
+        {"repo": "acme-web", "branch": "perf-images", "basedOn": "main", "purpose": "Lazy load images", "status": "in_progress", "created": "2026-01-17T09:00:00Z"},
+        {"repo": "acme-web", "branch": "redesign-v2", "basedOn": "main", "purpose": "New design system", "status": "in_progress", "created": "2026-01-10T11:00:00Z"},
+        {"repo": "acme-web", "branch": "dark-mode", "basedOn": "main", "purpose": "Dark theme", "status": "in_progress", "created": "2026-01-14T16:00:00Z"},
+        {"repo": "acme-web", "branch": "i18n", "basedOn": "main", "purpose": "i18n support", "status": "in_progress", "created": "2026-01-16T10:00:00Z"},
+        {"repo": "acme-web", "branch": "analytics", "basedOn": "main", "purpose": "Add analytics", "status": "in_progress", "created": "2026-01-12T08:00:00Z"},
+        {"repo": "acme-api", "branch": "graphql", "basedOn": "main", "purpose": "GraphQL layer", "status": "in_progress", "created": "2026-01-08T09:00:00Z"},
+        {"repo": "acme-api", "branch": "rate-limit", "basedOn": "main", "purpose": "Rate limiting", "status": "in_progress", "created": "2026-01-11T13:00:00Z"},
+        {"repo": "acme-mobile", "branch": "push-notif", "basedOn": "main", "purpose": "Push notifications", "status": "in_progress", "created": "2026-01-09T10:00:00Z"},
     ]
     with open(tmpdir / "workflow.jsonl", "w") as f:
         for entry in workflow_data:
             f.write(json.dumps(entry) + "\n")
 
-    # Mock health.jsonl with various states
+    # Mock health.jsonl with various states (folder names must match local.jsonl)
     health_data = [
-        {"folder": "frontend-feature-auth", "dirty": True, "unpushed": 3, "prState": "OPEN", "lastCheck": "2026-01-19T22:00:00Z"},
-        {"folder": "frontend-fix-nav", "dirty": False, "unpushed": 0, "prState": "MERGED", "lastCheck": "2026-01-19T22:00:00Z"},
-        {"folder": "frontend-perf-images", "dirty": True, "unpushed": 1, "prState": "OPEN", "lastCheck": "2026-01-19T22:00:00Z"},
-        {"folder": "frontend-redesign-v2", "dirty": False, "unpushed": 12, "prState": "DRAFT", "lastCheck": "2026-01-19T22:00:00Z"},
-        {"folder": "frontend-a11y-audit", "dirty": False, "unpushed": 0, "prState": "OPEN", "lastCheck": "2026-01-19T22:00:00Z"},
-        {"folder": "frontend-dark-mode", "dirty": True, "unpushed": 2, "prState": None, "lastCheck": "2026-01-19T22:00:00Z"},
-        {"folder": "frontend-i18n", "dirty": False, "unpushed": 5, "prState": "OPEN", "lastCheck": "2026-01-19T22:00:00Z"},
-        {"folder": "api-server-graphql", "dirty": True, "unpushed": 8, "prState": "OPEN", "lastCheck": "2026-01-19T22:00:00Z"},
-        {"folder": "api-server-rate-limit", "dirty": False, "unpushed": 0, "prState": "MERGED", "lastCheck": "2026-01-19T22:00:00Z"},
-        {"folder": "mobile-app-push-notif", "dirty": True, "unpushed": 4, "prState": "DRAFT", "lastCheck": "2026-01-19T22:00:00Z"},
+        {"folder": "acme-web-feature-auth", "dirty": True, "unpushed": 3, "prState": "OPEN", "lastCheck": "2026-01-19T22:00:00Z"},
+        {"folder": "acme-web-fix-checkout", "dirty": False, "unpushed": 0, "prState": "MERGED", "lastCheck": "2026-01-19T22:00:00Z"},
+        {"folder": "acme-web-perf-images", "dirty": True, "unpushed": 1, "prState": "OPEN", "lastCheck": "2026-01-19T22:00:00Z"},
+        {"folder": "acme-web-redesign-v2", "dirty": False, "unpushed": 12, "prState": "DRAFT", "lastCheck": "2026-01-19T22:00:00Z"},
+        {"folder": "acme-web-dark-mode", "dirty": True, "unpushed": 2, "prState": None, "lastCheck": "2026-01-19T22:00:00Z"},
+        {"folder": "acme-web-i18n", "dirty": False, "unpushed": 5, "prState": "OPEN", "lastCheck": "2026-01-19T22:00:00Z"},
+        {"folder": "acme-web-analytics", "dirty": False, "unpushed": 0, "prState": "OPEN", "lastCheck": "2026-01-19T22:00:00Z"},
+        {"folder": "acme-api-graphql", "dirty": True, "unpushed": 8, "prState": "OPEN", "lastCheck": "2026-01-19T22:00:00Z"},
+        {"folder": "acme-api-rate-limit", "dirty": False, "unpushed": 0, "prState": "MERGED", "lastCheck": "2026-01-19T22:00:00Z"},
+        {"folder": "acme-mobile-push", "dirty": True, "unpushed": 4, "prState": "DRAFT", "lastCheck": "2026-01-19T22:00:00Z"},
     ]
     with open(tmpdir / "health.jsonl", "w") as f:
         for entry in health_data:
@@ -522,12 +519,18 @@ def main():
             async with app.run_test(size=(120, 30)) as pilot:
                 # Wait for data to load
                 await pilot.pause()
-                # Select first project to show worktrees
-                await pilot.press("enter")
                 await pilot.pause()
-                # Move to worktree panel and select first row
-                await pilot.press("1")
-                await pilot.press("j")
+                # Navigate to first project and select it
+                await pilot.press("j")  # Move to first item
+                await pilot.pause()
+                await pilot.press("enter")  # Select project
+                await pilot.pause()
+                await pilot.pause()
+                # Move to worktree panel and select a row
+                await pilot.press("1")  # Focus worktree panel
+                await pilot.pause()
+                await pilot.press("j")  # Move down to first worktree
+                await pilot.press("j")  # Move to second for better visual
                 await pilot.pause()
                 # Save screenshot
                 app.save_screenshot(output_path)
