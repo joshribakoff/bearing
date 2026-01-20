@@ -5,6 +5,10 @@ description: Worktree-based workflow for parallel AI-assisted development
 
 # Bearing
 
+:::caution[Experimental]
+Bearing is experimental software being developed live on [YouTube](https://youtube.com/@joshribakoff). Expect breaking changes.
+:::
+
 Worktree-based workflow for parallel AI-assisted development.
 
 ## The Problem
@@ -19,16 +23,20 @@ Bearing enforces a **worktree-per-task** pattern. Each task gets its own isolate
 
 ```bash
 git clone https://github.com/joshribakoff/bearing ~/Projects/bearing
-~/Projects/bearing/install.sh
+cd ~/Projects/bearing
+go build -o bearing ./cmd/bearing
+# Add to PATH or move to /usr/local/bin
 ```
 
-The installer adds skills and hooks to Claude Code. After that, just ask:
+## Example Commands
 
-- "Create a worktree for the auth feature"
-- "What worktrees do I have?"
-- "Clean up the feature-auth worktree"
-
-Claude handles the rest.
+```bash
+bearing worktree new myapp feature-auth
+bearing worktree list
+bearing worktree cleanup myapp feature-auth
+bearing worktree check
+bearing worktree sync
+```
 
 ## Workspace Structure
 

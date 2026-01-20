@@ -43,4 +43,4 @@ bearing worktree register new-project
 
 - The folder must already exist and be a git repository
 - Typically used for base folders, not worktrees
-- Worktrees created with `worktree-new` are registered automatically
+- Worktrees created with `bearing worktree new` are registered automatically

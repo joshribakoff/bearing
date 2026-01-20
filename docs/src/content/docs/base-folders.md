@@ -44,4 +44,4 @@ bearing worktree check
 git -C myapp checkout main
 ```
 
-The `worktree-check` command will catch this violation.
+The `bearing worktree check` command will catch this violation.

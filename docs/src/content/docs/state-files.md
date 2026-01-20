@@ -57,4 +57,4 @@ This rebuilds `local.jsonl` from git state while preserving `workflow.jsonl` met
 
 ## Direct Editing
 
-Don't edit these files manually. Use the scripts instead—they handle consistency.
+Don't edit these files manually. Use the CLI instead—it handles consistency.

@@ -43,4 +43,4 @@ myapp         fix-bug-123      main        in_progress  Fix login redirect
 
 - `BASE=yes` indicates base folders that should stay on main
 - Use this to get an overview before starting new work
-- Combine with `worktree-check` to find issues
+- Combine with `bearing worktree check` to find issues
