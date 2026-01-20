@@ -1,8 +1,14 @@
 """Bearing TUI application."""
+import json
 import os
 import subprocess
 import webbrowser
 from pathlib import Path
+from datetime import datetime
+
+# Exit codes for session management
+EXIT_QUIT = 0
+EXIT_LAUNCH_CLAUDE = 42
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, Container
@@ -76,6 +82,7 @@ class BearingApp(App):
         Binding("R", "force_refresh", "Force Refresh", show=False),
         Binding("d", "daemon", "Daemon"),
         Binding("o", "open_pr", "Open PR", show=False),
+        Binding("e", "launch_claude", "Claude", show=True),
         # Panel navigation by number (0-indexed)
         Binding("0", "focus_panel_0", "Projects", show=False),
         Binding("1", "focus_panel_1", "Worktrees", show=False),
@@ -106,6 +113,38 @@ class BearingApp(App):
         self.state = BearingState(workspace)
         self._current_project: str | None = None
         self._panel_order = ["project-list", "worktree-table", "details-panel"]
+        self._selected_worktree_folder: str | None = None
+        self._exit_code = EXIT_QUIT
+        self._session_file = Path.home() / ".bearing" / "tui-session.json"
+
+    def _get_session_file(self) -> Path:
+        """Get the session state file path."""
+        self._session_file.parent.mkdir(parents=True, exist_ok=True)
+        return self._session_file
+
+    def _save_session(self) -> None:
+        """Save current selection state to session file."""
+        session = {
+            "selectedProject": self._current_project,
+            "selectedWorktree": self._selected_worktree_folder,
+            "timestamp": datetime.now().isoformat(),
+        }
+        self._get_session_file().write_text(json.dumps(session, indent=2))
+
+    def _load_session(self) -> dict | None:
+        """Load session state if recent (< 1 hour)."""
+        try:
+            session_file = self._get_session_file()
+            if not session_file.exists():
+                return None
+            session = json.loads(session_file.read_text())
+            # Check if session is recent (within 1 hour)
+            ts = datetime.fromisoformat(session.get("timestamp", ""))
+            if (datetime.now() - ts).total_seconds() > 3600:
+                return None
+            return session
+        except Exception:
+            return None
 
     def compose(self) -> ComposeResult:
         """Create the app layout."""
@@ -134,6 +173,22 @@ class BearingApp(App):
     def on_mount(self) -> None:
         """Load data when app mounts."""
         self.action_refresh()
+
+        # Try to restore session state
+        session = self._load_session()
+        if session:
+            project = session.get("selectedProject")
+            worktree = session.get("selectedWorktree")
+            if project:
+                # Select the project
+                project_list = self.query_one(ProjectList)
+                for i, item in enumerate(project_list.children):
+                    if hasattr(item, 'project') and item.project == project:
+                        project_list.index = i
+                        self._current_project = project
+                        self._update_worktree_table(project)
+                        break
+
         # Focus the project list initially
         self.query_one("#project-list", ProjectList).focus()
 
@@ -243,6 +298,7 @@ class BearingApp(App):
 
     def on_worktree_table_worktree_selected(self, event: WorktreeTable.WorktreeSelected) -> None:
         """Handle worktree selection."""
+        self._selected_worktree_folder = event.folder
         self._update_details(event.folder)
 
     def _update_details(self, folder: str) -> None:
