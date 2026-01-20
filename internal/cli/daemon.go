@@ -78,10 +78,11 @@ func runDaemonStatus(cmd *cobra.Command, args []string) error {
 	running, pid := d.IsRunning()
 
 	if daemonStatusJSON {
-		return json.NewEncoder(os.Stdout).Encode(daemonStatusOutput{
-			Running: running,
-			PID:     pid,
-		})
+		out := daemonStatusOutput{Running: running}
+		if running {
+			out.PID = pid
+		}
+		return json.NewEncoder(os.Stdout).Encode(out)
 	}
 
 	if running {

@@ -70,6 +70,10 @@ func (d *Daemon) IsRunning() (bool, int) {
 
 // Start starts the daemon (foreground or background)
 func (d *Daemon) Start(foreground bool) error {
+	if d.config.Interval <= 0 {
+		return fmt.Errorf("interval must be positive")
+	}
+
 	// Ensure bearing dir exists
 	if err := os.MkdirAll(d.config.BearingDir, 0755); err != nil {
 		return err
@@ -110,15 +114,16 @@ func (d *Daemon) startBackground() error {
 		},
 	}
 
-	args := []string{exe, "-w", d.config.WorkspaceDir, "daemon", "start", "--foreground"}
+	args := []string{exe, "-w", d.config.WorkspaceDir, "daemon", "start", "--foreground", "--interval", strconv.Itoa(int(d.config.Interval.Seconds()))}
 	process, err := os.StartProcess(exe, args, attr)
 	if err != nil {
 		return err
 	}
 
 	// Don't wait for the child
+	pid := process.Pid
 	process.Release()
-	fmt.Printf("Daemon started with PID %d\n", process.Pid)
+	fmt.Printf("Daemon started with PID %d\n", pid)
 	return nil
 }
 
@@ -130,7 +135,7 @@ func (d *Daemon) run() error {
 
 	// Handle signals
 	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
 	ticker := time.NewTicker(d.config.Interval)
 	defer ticker.Stop()
