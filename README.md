@@ -1,6 +1,6 @@
 # Bearing
 
-> **Note:** Bearing is experimental software being developed live on my [vlog](https://youtube.com/@joshribakoff). Expect breaking changes.
+> **Note:** Bearing is experimental software. Docs at [bearing.dev](https://bearing.dev). Expect breaking changes.
 
 Worktree-based workflow for parallel AI-assisted development.
 
