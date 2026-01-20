@@ -57,9 +57,13 @@ func (r *Repo) UnpushedCount(branch string) (int, error) {
 	return count, nil
 }
 
-// WorktreeAdd creates a new worktree
-func (r *Repo) WorktreeAdd(path, branch string) error {
-	_, err := r.run("worktree", "add", "-b", branch, path)
+// WorktreeAdd creates a new worktree with optional start point
+func (r *Repo) WorktreeAdd(path, branch, startPoint string) error {
+	args := []string{"worktree", "add", "-b", branch, path}
+	if startPoint != "" {
+		args = append(args, startPoint)
+	}
+	_, err := r.run(args...)
 	return err
 }
 
@@ -104,6 +108,26 @@ func (r *Repo) Fetch() error {
 func (r *Repo) RemoteBranchExists(branch string) bool {
 	_, err := r.run("rev-parse", "--verify", fmt.Sprintf("origin/%s", branch))
 	return err == nil
+}
+
+// ListRemoteBranches returns all remote branch names (without origin/ prefix)
+func (r *Repo) ListRemoteBranches() ([]string, error) {
+	out, err := r.run("branch", "-r", "--format=%(refname:short)")
+	if err != nil {
+		return nil, err
+	}
+	var branches []string
+	for _, line := range strings.Split(out, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || line == "origin/HEAD" {
+			continue
+		}
+		// Strip origin/ prefix
+		if strings.HasPrefix(line, "origin/") {
+			branches = append(branches, strings.TrimPrefix(line, "origin/"))
+		}
+	}
+	return branches, nil
 }
 
 // WorktreeInfo contains information about a git worktree

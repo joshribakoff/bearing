@@ -127,7 +127,6 @@ func (d *Daemon) run() error {
 	if err := os.WriteFile(d.PIDFile(), []byte(strconv.Itoa(os.Getpid())), 0644); err != nil {
 		return err
 	}
-	defer os.Remove(d.PIDFile())
 
 	// Handle signals
 	sigChan := make(chan os.Signal, 1)
@@ -145,11 +144,13 @@ func (d *Daemon) run() error {
 		select {
 		case <-ticker.C:
 			d.runHealthCheck()
-		case <-sigChan:
-			fmt.Println("Daemon stopping...")
+		case sig := <-sigChan:
+			fmt.Printf("Received signal %v, stopping...\n", sig)
+			os.Remove(d.PIDFile())
 			return nil
 		case <-d.stop:
 			fmt.Println("Daemon stopping...")
+			os.Remove(d.PIDFile())
 			return nil
 		}
 	}

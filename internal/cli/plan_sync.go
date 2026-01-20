@@ -1,9 +1,12 @@
 package cli
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -69,9 +72,36 @@ func runPlanSync(cmd *cobra.Command, args []string) error {
 		if planSyncDryRun {
 			fmt.Printf("  %s: would sync to %s#%s\n", pf, fm.Repo, fm.Issue)
 		} else {
-			fmt.Printf("  %s: syncing to %s#%s...\n", pf, fm.Repo, fm.Issue)
-			// TODO: Implement sync
+			fmt.Printf("  %s: syncing to %s#%s... ", pf, fm.Repo, fm.Issue)
+			if err := pushPlanToIssue(pf, fm); err != nil {
+				fmt.Printf("ERROR: %v\n", err)
+			} else {
+				fmt.Printf("OK\n")
+			}
 		}
+	}
+
+	return nil
+}
+
+func pushPlanToIssue(planFile string, fm *planFrontmatter) error {
+	// Re-read the file to get body
+	_, body, err := parsePlanFile(planFile)
+	if err != nil {
+		return err
+	}
+
+	body = strings.TrimSpace(body)
+
+	// Push to GitHub using gh issue edit
+	repoPath := filepath.Join(WorkspaceDir(), fm.Repo)
+	ghCmd := exec.Command("gh", "issue", "edit", fm.Issue, "--body", body)
+	ghCmd.Dir = repoPath
+	var stderr bytes.Buffer
+	ghCmd.Stderr = &stderr
+
+	if err := ghCmd.Run(); err != nil {
+		return fmt.Errorf("%w: %s", err, stderr.String())
 	}
 
 	return nil

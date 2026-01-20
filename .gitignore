@@ -3,3 +3,4 @@
 bearing
 coverage.out
 *.exe
+*.lock

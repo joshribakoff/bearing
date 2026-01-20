@@ -58,8 +58,9 @@ func runWorktreeSync(cmd *cobra.Command, args []string) error {
 		// Infer repo name
 		repoName := folder
 		if !isBase {
-			// Check if folder name ends with -branch
-			suffix := "-" + branch
+			// Check if folder name ends with -branch (with / sanitized to -)
+			sanitizedBranch := strings.ReplaceAll(branch, "/", "-")
+			suffix := "-" + sanitizedBranch
 			if strings.HasSuffix(folder, suffix) {
 				repoName = folder[:len(folder)-len(suffix)]
 			}

@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/joshribakoff/bearing/internal/git"
 	"github.com/joshribakoff/bearing/internal/jsonl"
@@ -24,8 +25,11 @@ func runWorktreeCleanup(cmd *cobra.Command, args []string) error {
 	repoName := args[0]
 	branch := args[1]
 
+	// Sanitize branch name for folder (replace / with -)
+	folderBranch := strings.ReplaceAll(branch, "/", "-")
+	folderName := fmt.Sprintf("%s-%s", repoName, folderBranch)
+
 	baseRepo := filepath.Join(WorkspaceDir(), repoName)
-	folderName := fmt.Sprintf("%s-%s", repoName, branch)
 	worktreePath := filepath.Join(WorkspaceDir(), folderName)
 	store := jsonl.NewStore(WorkspaceDir())
 
@@ -37,17 +41,21 @@ func runWorktreeCleanup(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to remove worktree: %w", err)
 	}
 
-	// Delete the branch if it exists and has been merged
-	_ = repo.BranchDelete(branch, false)
+	// Delete the branch if it has been merged (non-force delete)
+	// If delete fails, branch has unmerged commits
+	status := "cleaned"
+	if err := repo.BranchDelete(branch, false); err == nil {
+		status = "merged"
+	}
 
-	// Update workflow.jsonl - mark as merged
+	// Update workflow.jsonl with actual status
 	workflows, err := store.ReadWorkflow()
 	if err != nil {
 		return err
 	}
 	for i, w := range workflows {
 		if w.Repo == repoName && w.Branch == branch {
-			workflows[i].Status = "merged"
+			workflows[i].Status = status
 		}
 	}
 	if err := store.WriteWorkflow(workflows); err != nil {

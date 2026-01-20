@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/joshribakoff/bearing/internal/git"
 	"github.com/joshribakoff/bearing/internal/jsonl"
@@ -39,8 +40,10 @@ func runWorktreeRegister(cmd *cobra.Command, args []string) error {
 	// Infer repo name (folder name without branch suffix for worktrees)
 	repoName := folder
 	if !isBase && len(branch) > 0 {
-		suffix := "-" + branch
-		if len(folder) > len(suffix) && folder[len(folder)-len(suffix):] == suffix {
+		// Handle sanitized branch names (/ replaced with -)
+		sanitizedBranch := strings.ReplaceAll(branch, "/", "-")
+		suffix := "-" + sanitizedBranch
+		if strings.HasSuffix(folder, suffix) {
 			repoName = folder[:len(folder)-len(suffix)]
 		}
 	}

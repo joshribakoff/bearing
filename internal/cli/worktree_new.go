@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/joshribakoff/bearing/internal/git"
@@ -32,22 +33,26 @@ func runWorktreeNew(cmd *cobra.Command, args []string) error {
 	repoName := args[0]
 	branch := args[1]
 
+	// Sanitize branch name for folder (replace / with -)
+	folderBranch := strings.ReplaceAll(branch, "/", "-")
+	folderName := fmt.Sprintf("%s-%s", repoName, folderBranch)
+
 	baseRepo := filepath.Join(WorkspaceDir(), repoName)
-	worktreePath := filepath.Join(WorkspaceDir(), fmt.Sprintf("%s-%s", repoName, branch))
+	worktreePath := filepath.Join(WorkspaceDir(), folderName)
 	store := jsonl.NewStore(WorkspaceDir())
 
 	repo := git.NewRepo(baseRepo)
 
-	// Create the worktree
-	fmt.Printf("Creating worktree: %s\n", worktreePath)
-	if err := repo.WorktreeAdd(worktreePath, branch); err != nil {
-		return fmt.Errorf("failed to create worktree: %w", err)
-	}
-
-	// Add to workflow.jsonl
+	// Determine start point
 	basedOn := newBasedOn
 	if basedOn == "" {
 		basedOn = "main"
+	}
+
+	// Create the worktree from basedOn branch
+	fmt.Printf("Creating worktree: %s\n", worktreePath)
+	if err := repo.WorktreeAdd(worktreePath, branch, basedOn); err != nil {
+		return fmt.Errorf("failed to create worktree: %w", err)
 	}
 	if err := store.AppendWorkflow(jsonl.WorkflowEntry{
 		Repo:    repoName,
@@ -61,7 +66,6 @@ func runWorktreeNew(cmd *cobra.Command, args []string) error {
 	}
 
 	// Add to local.jsonl
-	folderName := fmt.Sprintf("%s-%s", repoName, branch)
 	if err := store.AppendLocal(jsonl.LocalEntry{
 		Folder: folderName,
 		Repo:   repoName,
