@@ -31,6 +31,7 @@ export const navigation: NavItem[] = [
       'claude-code-hooks',
       'slash-commands',
       'plan-sync',
+      'ai-features',
     ],
   },
 ];
@@ -56,6 +57,7 @@ export const titles: Record<string, string> = {
   'claude-code-hooks': 'Claude Code Hooks',
   'slash-commands': 'Slash Commands',
   'plan-sync': 'Plan Sync',
+  'ai-features': 'AI Features',
 };
 
 export function getTitle(slug: string): string {
