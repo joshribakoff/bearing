@@ -38,9 +38,9 @@ echo "5. Testing worktree status..."
 bearing -w "$TEST_DIR" worktree status --json | grep -q "test-repo-feature-x" || { echo "FAIL: status failed"; exit 1; }
 echo "   OK: status works"
 
-# 6. Test worktree-check
+# 6. Test worktree-check (Claude Code hook format)
 echo "6. Testing worktree check..."
-bearing -w "$TEST_DIR" worktree check --json | grep -q '"ok":true' || { echo "FAIL: check failed"; exit 1; }
+bearing -w "$TEST_DIR" worktree check --json | grep -q '"continue":true' || { echo "FAIL: check failed"; exit 1; }
 echo "   OK: check works"
 
 # 7. Test daemon status
@@ -59,6 +59,13 @@ echo "9. Testing worktree sync..."
 bearing -w "$TEST_DIR" worktree sync
 cat "$TEST_DIR/local.jsonl" | grep -q "test-repo" || { echo "FAIL: sync failed"; exit 1; }
 echo "   OK: sync works"
+
+# 10. Test init (idempotent hook setup)
+echo "10. Testing init..."
+bearing -w "$TEST_DIR" init
+bearing -w "$TEST_DIR" init | grep -q "already configured" || { echo "FAIL: init not idempotent"; exit 1; }
+[ -f "$TEST_DIR/.claude/settings.json" ] || { echo "FAIL: settings.json not created"; exit 1; }
+echo "   OK: init works and is idempotent"
 
 echo ""
 echo "All tests passed!"

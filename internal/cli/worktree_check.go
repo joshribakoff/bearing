@@ -81,7 +81,23 @@ func runWorktreeCheck(cmd *cobra.Command, args []string) error {
 	}
 
 	if checkJSON {
-		return json.NewEncoder(os.Stdout).Encode(results)
+		// Output Claude Code hook format
+		hookOutput := struct {
+			Continue      bool   `json:"continue"`
+			SystemMessage string `json:"systemMessage,omitempty"`
+		}{Continue: true}
+
+		if hasProblems {
+			msg := "BEARING WARNING: Worktree violations detected. "
+			for _, r := range results {
+				if !r.OK {
+					msg += fmt.Sprintf("'%s': %v. ", r.Folder, r.Problems)
+				}
+			}
+			msg += "Ask user: fix issues or proceed anyway?"
+			hookOutput.SystemMessage = msg
+		}
+		return json.NewEncoder(os.Stdout).Encode(hookOutput)
 	}
 
 	for _, r := range results {

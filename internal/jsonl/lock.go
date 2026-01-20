@@ -2,6 +2,7 @@ package jsonl
 
 import (
 	"os"
+	"path/filepath"
 	"syscall"
 )
 
@@ -12,6 +13,12 @@ type FileLock struct {
 
 // NewFileLock creates a lock file at the given path
 func NewFileLock(path string) (*FileLock, error) {
+	// Ensure parent directory exists
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, err
+	}
+
 	f, err := os.OpenFile(path+".lock", os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
 		return nil, err
