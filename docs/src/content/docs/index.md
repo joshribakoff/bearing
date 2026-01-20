@@ -6,7 +6,7 @@ description: Worktree-based workflow for parallel AI-assisted development
 # Bearing
 
 :::caution[Experimental]
-Bearing is experimental software. Read the [introductory blog post](https://joshribakoff.com). Expect breaking changes.
+Bearing is experimental software. Read the [introductory blog post](https://www.joshribakoff.com/blog/deliberate-ai-use/). Expect breaking changes.
 :::
 
 Worktree-based workflow for parallel AI-assisted development.
