@@ -7,7 +7,7 @@ description: Terminal user interface for Bearing
 
 A beautiful terminal user interface for browsing and managing worktrees, inspired by lazygit.
 
-![Bearing TUI Screenshot](/images/tui-screenshot.png)
+![Bearing TUI Screenshot](/images/tui-screenshot.svg)
 
 ## Installation
 

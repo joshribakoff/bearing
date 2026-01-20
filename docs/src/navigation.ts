@@ -3,6 +3,7 @@ import type { NavItem } from 'sailkit/packages/compass';
 export const navigation: NavItem[] = [
   'index',
   'workspace-layout',
+  'tui',
   {
     slug: 'concepts',
     children: [
@@ -34,6 +35,7 @@ export const navigation: NavItem[] = [
 export const titles: Record<string, string> = {
   'index': 'Introduction',
   'workspace-layout': 'Workspace Layout',
+  'tui': 'Terminal UI',
   'commands': 'Commands',
   'worktree-new': 'worktree-new',
   'worktree-cleanup': 'worktree-cleanup',
