@@ -100,9 +100,25 @@ const { prev, next } = getNeighbors(navigation, slug, { leavesOnly: true });
         font-weight: 700;
         color: var(--color-accent);
         text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
       }
 
       .sidebar-logo:hover { color: var(--color-accent-hover); }
+
+      .sidebar-logo svg {
+        width: 24px;
+        height: 24px;
+      }
+
+      .sidebar-logo svg path {
+        stroke: var(--color-text-muted);
+      }
+
+      .sidebar-logo:hover svg path {
+        stroke: var(--color-accent-hover);
+      }
 
       main {
         grid-area: main;
@@ -145,7 +161,14 @@ const { prev, next } = getNeighbors(navigation, slug, { leavesOnly: true });
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <a href="/" class="sidebar-logo">Bearing</a>
+        <a href="/" class="sidebar-logo">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M 50 10 A 40 40 0 1 1 35 12" fill="none" stroke-width="6" stroke-linecap="round"/>
+            <path d="M 78 65 A 28 28 0 1 1 85 45" fill="none" stroke-width="6" stroke-linecap="round"/>
+            <path d="M 35 50 A 16 16 0 1 1 38 62" fill="none" stroke-width="6" stroke-linecap="round"/>
+          </svg>
+          Bearing
+        </a>
       </div>
       <Sidebar currentSlug={slug} />
     </aside>
