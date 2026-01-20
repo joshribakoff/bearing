@@ -1,221 +1,200 @@
-# Bearing
+<p align="center">
+  <img src="https://img.shields.io/badge/⚓-Bearing-blue?style=for-the-badge&logoColor=white" alt="Bearing" />
+</p>
 
-> **Note:** Bearing is experimental software. Docs at [bearing.dev](https://bearing.dev). Expect breaking changes.
+<h1 align="center">⚓ Bearing</h1>
 
-Worktree-based workflow for parallel AI-assisted development.
+<p align="center">
+  <strong>Worktree-based workflow for parallel AI-assisted development</strong>
+</p>
 
-## Why
+<p align="center">
+  <a href="https://bearing.dev"><img src="https://img.shields.io/badge/📖_Docs-bearing.dev-blue?style=flat-square" alt="Documentation" /></a>
+  <a href="https://github.com/joshribakoff/bearing/actions"><img src="https://img.shields.io/github/actions/workflow/status/joshribakoff/bearing/go.yml?style=flat-square&label=build" alt="Build Status" /></a>
+  <a href="https://goreportcard.com/report/github.com/joshribakoff/bearing"><img src="https://goreportcard.com/badge/github.com/joshribakoff/bearing?style=flat-square" alt="Go Report Card" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License" /></a>
+</p>
 
-When multiple AI agents work on the same codebase, they can step on each other if they switch branches in shared folders. Bearing enforces a worktree-per-task pattern that keeps agents isolated.
+<p align="center">
+  <a href="https://www.joshribakoff.com/blog/deliberate-ai-use/">📝 Read the blog post</a> •
+  <a href="https://bearing.dev">📖 Documentation</a> •
+  <a href="#-quick-start">🚀 Quick Start</a>
+</p>
 
-## Install
+---
 
-### From Source (Go 1.21+)
-```bash
-git clone https://github.com/joshribakoff/bearing ~/Projects/bearing
-cd ~/Projects/bearing
-go build -o bearing ./cmd/bearing
-sudo mv bearing /usr/local/bin/  # or add to PATH
+## ✨ Why Bearing?
 
-# Initialize hooks in your workspace
-cd ~/Projects
-bearing init
-```
+When multiple AI agents work on the same codebase, **they step on each other**. Branch switching in shared folders causes conflicts, lost work, and confusion.
 
-### Verify
-```bash
-bearing --help
-bearing worktree list
-```
+**Bearing enforces a worktree-per-task pattern** that keeps every agent isolated:
 
-## Workspace Layout
+- 🔒 **Isolation** — Each task gets its own directory. No conflicts.
+- 🚀 **Parallelism** — Run 10 Claude sessions on 10 features simultaneously
+- 📊 **Visibility** — See all active work at a glance
+- 🔄 **Workflow** — Track purpose, status, and relationships
+- ⚡ **Scale** — Thousands of worktrees across hundreds of repos
 
-Bearing assumes a flat workspace folder containing all your projects and worktrees:
+---
 
-```
-~/Projects/                    # Your workspace root
-├── bearing/                   # Bearing itself (cloned here)
-├── myapp/                     # Base folder (stays on main)
-├── myapp-feature-auth/        # Worktree for auth feature
-├── myapp-fix-bug-123/         # Worktree for bug fix
-├── other-project/             # Another base folder
-├── other-project-refactor/    # Its worktree
-├── workflow.jsonl             # Workflow state (committable)
-└── local.jsonl                # Local worktree state
-```
+## 🖥️ Beautiful Terminal UI
 
-This scales well—workspaces with 100+ worktrees work fine. The flat structure makes it easy to see everything at a glance and lets multiple AI agents work in parallel without conflicts.
-
-## Architecture
-
-Bearing is a Go binary with an optional background daemon for health monitoring:
-
-| Layer | Responsibility | Storage |
-|-------|---------------|---------|
-| **Git submodules** | Commit pointers, remotes, branch refs | `.gitmodules`, `.git/` |
-| **Manifest** | Workflow metadata cache (purposes, status) | `workflow.jsonl`, `local.jsonl` |
-| **CLI** | Orchestration, guardrails | `bearing` binary |
-| **Daemon** | Background health monitoring | Optional |
-
-**Design principle:** Git is the source of truth. The manifest is a cache of computed state plus workflow metadata. After a fresh clone, run `bearing worktree sync` to rebuild the manifest from git state.
-
-**Fresh clone workflow:**
-```bash
-git clone --recurse-submodules https://github.com/user/projects.git
-cd projects
-bearing worktree sync  # Rebuild manifest from git
-```
-
-## Concepts
-
-- **Base folders** (e.g., `fightingwithai.com/`) stay on `main`
-- **Worktrees** (e.g., `fightingwithai.com-feature/`) are created for tasks
-- **Workflow state** (`workflow.jsonl`) tracks branches, purposes, relationships (committable)
-- **Local state** (`local.jsonl`) tracks worktree folders (not committed)
-- **Config** (`.bearing.yaml`) defines workspace repos and settings
-
-## Commands
-
-Run from your Projects folder:
-
-| Command | Description |
-|---------|-------------|
-| `bearing worktree new <repo> <branch>` | Create worktree for branch |
-| `bearing worktree cleanup <repo> <branch>` | Remove worktree after merge |
-| `bearing worktree sync` | Rebuild manifest from git state |
-| `bearing worktree list` | Display manifest as ASCII table |
-| `bearing worktree status` | Show health status (dirty, unpushed, PR) |
-| `bearing worktree check` | Validate invariants |
-| `bearing worktree register <folder>` | Register existing folder as base |
-| `bearing daemon start` | Start background health monitor |
-| `bearing daemon stop` | Stop daemon |
-| `bearing init` | Configure Claude Code hooks |
-
-## TUI
-
-A terminal UI for browsing worktrees, inspired by lazygit.
+Inspired by lazygit, the Bearing TUI gives you full visibility into your workspace:
 
 ![Bearing TUI](docs/public/images/tui-screenshot.svg)
 
+**Features:**
+- 📁 Browse all projects and worktrees
+- 🎯 Vim-style navigation (`j/k`, `h/l`)
+- 📋 Numbered panel switching (like lazygit)
+- 🔍 Health status at a glance (dirty, unpushed, PR state)
+- 🌙 Darcula-inspired dark theme
+
 ```bash
-# Install (Python 3.10+)
-cd ~/Projects/bearing-tui/tui
-make install-dev
+# Install TUI (Python 3.10+)
+pip install bearing-tui
 
 # Run
 bearing-tui
 ```
 
-Press `?` for keybindings. `0`/`1`/`2` to switch panels, `j`/`k` to navigate, `q` to quit.
+---
 
-## State Files
+## 🚀 Quick Start
 
-Bearing uses two state files in the workspace root:
-
-**workflow.jsonl** (committable - portable across machines):
-```jsonl
-{"repo":"myrepo","branch":"feature","basedOn":"main","purpose":"Add login","status":"in_progress","created":"2024-12-20T12:00:00Z"}
-```
-
-**local.jsonl** (not committed - local worktree paths):
-```jsonl
-{"folder":"myrepo","repo":"myrepo","branch":"main","base":true}
-{"folder":"myrepo-feature","repo":"myrepo","branch":"feature","base":false}
-```
-
-Agents should interact via the CLI, never edit these files directly.
-
-## Config
-
-`.bearing.yaml` defines the workspace:
-```yaml
-repos:
-  - name: myrepo
-    remote: https://github.com/org/myrepo.git
-    defaultBranch: main
-
-state:
-  workflow: workflow.jsonl
-  local: local.jsonl
-```
-
-## Testing
+### Install CLI
 
 ```bash
-go test ./...
+# Clone and build
+git clone https://github.com/joshribakoff/bearing ~/Projects/bearing
+cd ~/Projects/bearing
+go build -o bearing ./cmd/bearing
+sudo mv bearing /usr/local/bin/
+
+# Initialize your workspace
+cd ~/Projects
+bearing init
 ```
 
-## Hooks
+### Create Your First Worktree
 
-Bearing integrates with Claude Code's hook system to check invariants before each action.
+```bash
+# Create a worktree for a new feature
+bearing worktree new myapp feature-auth
 
-Add to `.claude/settings.json`:
+# List all worktrees
+bearing worktree list
+
+# Clean up after merging
+bearing worktree cleanup myapp feature-auth
+```
+
+---
+
+## 📁 Workspace Layout
+
+Bearing uses a flat workspace structure for maximum visibility:
+
+```
+~/Projects/
+├── 📦 bearing/                 # Bearing itself
+├── 📦 myapp/                   # Base folder (stays on main)
+├── 🔀 myapp-feature-auth/      # Worktree for auth feature
+├── 🔀 myapp-fix-bug-123/       # Worktree for bug fix
+├── 📦 other-project/           # Another base folder
+├── 🔀 other-project-refactor/  # Its worktree
+├── 📄 workflow.jsonl           # Workflow state (committable)
+└── 📄 local.jsonl              # Local worktree paths
+```
+
+**Base folders stay on `main`**. Worktrees are created for each task. This scales to **thousands of worktrees**.
+
+---
+
+## 🛠️ Commands
+
+| Command | Description |
+|---------|-------------|
+| `bearing worktree new <repo> <branch>` | 🆕 Create worktree for branch |
+| `bearing worktree cleanup <repo> <branch>` | 🧹 Remove worktree after merge |
+| `bearing worktree sync` | 🔄 Rebuild manifest from git |
+| `bearing worktree list` | 📋 Display ASCII table |
+| `bearing worktree status` | 📊 Show health (dirty, PR) |
+| `bearing worktree check` | ✅ Validate invariants |
+| `bearing daemon start` | 👻 Start health monitor |
+
+---
+
+## 🤖 Claude Code Integration
+
+Bearing integrates with Claude Code's hook system:
 
 ```json
 {
   "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bearing worktree check --json"
-          }
-        ]
-      }
-    ]
+    "UserPromptSubmit": [{
+      "hooks": [{
+        "type": "command",
+        "command": "bearing worktree check --json"
+      }]
+    }]
   }
 }
 ```
 
-**How it works:**
-- Hook runs on every user prompt (before Claude responds)
-- `--json` outputs Claude Code hook format with `continue: true`
-- On violations, `systemMessage` tells Claude to ask the user whether to fix or proceed
-- Claude sees the context and can offer to run `git -C <folder> checkout main`
+**What it does:**
+- ✅ Checks invariants before every Claude action
+- ⚠️ Warns when base folders drift from main
+- 🔧 Claude can auto-fix violations
 
-**Flags:**
-- `--json`: Output JSON for Claude Code hooks (always exits 0)
-- `--quiet`: Suppress human-readable output on success (for manual runs)
+---
 
-## Slash Commands
+## 🏗️ Architecture
 
-After install, these slash commands are available:
+| Layer | Responsibility |
+|-------|----------------|
+| **Git** | Source of truth (submodules, worktrees) |
+| **Manifest** | Workflow metadata (`workflow.jsonl`) |
+| **CLI** | Orchestration & guardrails |
+| **Daemon** | Background health monitoring |
+| **TUI** | Visual workspace browser |
 
-| Command | Description |
-|---------|-------------|
-| `/worktree-status` | Check invariants and display worktree table |
+---
 
-## Future Ideas
+## 📊 State Files
 
-Documented for future consideration:
-
-### Agent Wrapper Script
-A wrapper script that runs pre-flight checks before launching any AI agent:
-```bash
-#!/bin/bash
-bearing worktree check || { echo "Fix violations first"; exit 1; }
-exec "${BEARING_AGENT:-claude}" "$@"
+**workflow.jsonl** (committable):
+```jsonl
+{"repo":"myapp","branch":"feature","purpose":"Add auth","status":"in_progress"}
 ```
-Benefits: True blocking (refuses to start), portable across agents (Claude, Cursor, Aider), clear error display. Current hook approach works within Claude Code's system but cannot truly block session start.
 
-### Workflow Automation
-- **worktree-push**: Push branch and optionally create PR
-- **worktree-finish**: Push + PR + mark complete in workflow.jsonl
-- **worktree-checkout**: Recreate local worktree from workflow.jsonl entry (for switching machines)
-- **Auto-PR templates**: Configure PR body template in .bearing.yaml
+**local.jsonl** (local only):
+```jsonl
+{"folder":"myapp-feature","repo":"myapp","branch":"feature","base":false}
+```
 
-### Validation & Safety
-- **Auto-fix with --force**: `bearing worktree check --fix` to checkout main on violating base folders
-- **Git hooks in repos**: Pre-checkout hooks to block unsafe branch switches
-- **Cross-repo coordination**: Track which agent owns which worktree
+---
 
-### Configuration
-- **Local overrides**: `~/.bearing.yaml` for user-specific settings
-- **Per-repo config**: `.bearing.yaml` in each repo for repo-specific behavior
-- **Workflow config**: autoPush, autoPR, cleanupOnMerge settings
+## 🧪 Testing
 
-### Platform Support
-- **Windows**: Path separator handling, PowerShell scripts
-- **Shell compatibility**: Fish, zsh, bash differences
-- **CI integration**: GitHub Actions for smoke tests
+```bash
+# Go tests
+go test ./...
+
+# TUI tests
+cd tui && make test
+```
+
+---
+
+## 📚 Learn More
+
+- 📖 [Full Documentation](https://bearing.dev)
+- 📝 [Blog Post: Deliberate AI Use](https://www.joshribakoff.com/blog/deliberate-ai-use/)
+- 🐛 [Report Issues](https://github.com/joshribakoff/bearing/issues)
+
+---
+
+<p align="center">
+  Made with ⚓ for the AI-assisted development era
+</p>
