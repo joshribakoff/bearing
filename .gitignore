@@ -1,6 +1,10 @@
-
 # Go build artifacts
 bearing
 coverage.out
 *.exe
 *.lock
+
+# Python build artifacts
+*.pyc
+__pycache__/
+*.egg-info/

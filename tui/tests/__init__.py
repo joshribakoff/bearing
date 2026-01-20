@@ -1,0 +1,1 @@
+"""Bearing TUI tests."""

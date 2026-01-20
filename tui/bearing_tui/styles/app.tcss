@@ -1,0 +1,240 @@
+/* Bearing TUI - Darcula-inspired theme */
+
+/* Color variables - Darcula palette */
+$bg: #1e1e1e;
+$bg-panel: #252526;
+$bg-surface: #2d2d2d;
+$bg-highlight: #37373d;
+$bg-selection: #264f78;
+
+$border: #3c3c3c;
+$border-focus: #007acc;
+$border-dim: #2d2d2d;
+
+$text: #d4d4d4;
+$text-dim: #808080;
+$text-bright: #ffffff;
+
+$accent-orange: #ce9178;
+$accent-yellow: #dcdcaa;
+$accent-green: #6a9955;
+$accent-blue: #569cd6;
+$accent-purple: #c586c0;
+$accent-cyan: #4ec9b0;
+$accent-red: #f44747;
+
+/* Main screen layout */
+Screen {
+    background: $bg;
+    layout: vertical;
+}
+
+/* Title bar */
+#title {
+    dock: top;
+    width: 100%;
+    height: 1;
+    background: $bg-surface;
+    color: $accent-cyan;
+    text-style: bold;
+    text-align: center;
+    border-bottom: solid $border;
+}
+
+/* Main container with panels */
+#main-container {
+    layout: horizontal;
+    height: 1fr;
+    background: $bg;
+}
+
+/* Left panel - Projects */
+#projects-panel {
+    width: 28;
+    min-width: 20;
+    background: $bg-panel;
+    border: round $border;
+    margin: 0 0 0 1;
+}
+
+#projects-panel:focus-within {
+    border: round $border-focus;
+}
+
+/* Right panel - Worktrees */
+#worktrees-panel {
+    width: 1fr;
+    background: $bg-panel;
+    border: round $border;
+    margin: 0 1 0 1;
+}
+
+#worktrees-panel:focus-within {
+    border: round $border-focus;
+}
+
+/* Details panel at bottom */
+#details-panel {
+    height: auto;
+    min-height: 7;
+    max-height: 10;
+    background: $bg-panel;
+    border: round $border;
+    margin: 0 1 0 1;
+    padding: 0 1;
+}
+
+/* Footer with keybindings */
+#footer-bar {
+    dock: bottom;
+    width: 100%;
+    height: 1;
+    background: $bg-surface;
+    color: $text-dim;
+    padding: 0 1;
+    border-top: solid $border;
+}
+
+/* Project list styling */
+ProjectList {
+    background: $bg-panel;
+    scrollbar-background: $bg-surface;
+    scrollbar-color: $border;
+    scrollbar-color-hover: $text-dim;
+    scrollbar-color-active: $text;
+    border: none;
+}
+
+ProjectList > ListItem {
+    padding: 0 1;
+    height: 1;
+    background: transparent;
+    color: $text;
+}
+
+ProjectList > ListItem:hover {
+    background: $bg-highlight;
+}
+
+/* Highlighted item - always show with blue background */
+ProjectList ListItem.--highlight {
+    background: $bg-selection !important;
+    color: $text-bright !important;
+}
+
+/* When focused, make it slightly brighter */
+ProjectList:focus ListItem.--highlight {
+    background: #2d5a8a !important;
+    color: $text-bright !important;
+    text-style: bold;
+}
+
+/* Worktree table styling */
+WorktreeTable {
+    background: $bg-panel;
+    scrollbar-background: $bg-surface;
+    scrollbar-color: $border;
+    scrollbar-color-hover: $text-dim;
+    border: none;
+}
+
+WorktreeTable > .datatable--header {
+    background: $bg-surface;
+    color: $accent-blue;
+    text-style: bold;
+}
+
+/* Cursor when table has focus - bright selection */
+WorktreeTable:focus > .datatable--cursor {
+    background: $bg-selection;
+    color: $text-bright;
+    text-style: bold;
+}
+
+/* Cursor when table doesn't have focus - dimmer but visible */
+WorktreeTable > .datatable--cursor {
+    background: #1e3a5f;
+    color: $text;
+}
+
+WorktreeTable > .datatable--header-cursor {
+    background: $bg-surface;
+    color: $accent-blue;
+}
+
+WorktreeTable > .datatable--even-row {
+    background: $bg-panel;
+}
+
+WorktreeTable > .datatable--odd-row {
+    background: $bg-surface;
+}
+
+WorktreeTable:focus > .datatable--even-row {
+    background: $bg-panel;
+}
+
+WorktreeTable:focus > .datatable--odd-row {
+    background: $bg-surface;
+}
+
+/* Details panel styling */
+DetailsPanel {
+    height: auto;
+    min-height: 5;
+    max-height: 8;
+    background: $bg-panel;
+    color: $text;
+    border-left: round $border;
+    border-right: round $border;
+    border-bottom: round $border;
+    margin: 0 1 1 1;
+    padding: 1;
+}
+
+DetailsPanel:focus {
+    border: round $border-focus;
+}
+
+/* Panel headers with numbers */
+.panel-header {
+    height: 1;
+    background: $bg-surface;
+    color: $accent-yellow;
+    text-style: bold;
+    padding: 0 1;
+}
+
+.details-header {
+    margin: 1 1 0 1;
+    background: $bg-surface;
+    border-top: round $border;
+    border-left: round $border;
+    border-right: round $border;
+}
+
+/* Help modal styling */
+HelpScreen {
+    align: center middle;
+}
+
+#help-modal {
+    width: 50;
+    height: auto;
+    max-height: 80%;
+    background: $bg-panel;
+    border: round $accent-cyan;
+    padding: 1 2;
+}
+
+#help-content {
+    width: 100%;
+    height: auto;
+}
+
+/* Notifications styling */
+Toast {
+    background: $bg-surface;
+    color: $text;
+    border: round $accent-blue;
+}
