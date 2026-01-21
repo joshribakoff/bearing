@@ -274,8 +274,29 @@ class BearingApp(App):
                 self._update_worktree_table(project)
                 break
 
+    def _ensure_daemon_running(self) -> None:
+        """Start daemon if not already running."""
+        try:
+            result = subprocess.run(
+                ["bearing", "daemon", "status"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+            if "running" not in result.stdout.lower():
+                # Start daemon in background
+                subprocess.Popen(
+                    ["bearing", "daemon", "start"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            # bearing CLI not found or timeout - skip daemon
+            pass
+
     def on_mount(self) -> None:
         """Load data when app mounts."""
+        self._ensure_daemon_running()
         self.action_refresh()
         # Restore session (includes focus) or default to project list
         if not self._restore_session():
