@@ -55,6 +55,21 @@ class HealthEntry:
     last_check: Optional[datetime]
 
 
+@dataclass
+class PREntry:
+    """Represents a GitHub PR from prs.jsonl."""
+    repo: str
+    number: int
+    title: str
+    state: str  # OPEN, CLOSED, MERGED
+    branch: str
+    base_branch: str
+    author: str
+    updated: Optional[datetime]
+    checks: Optional[str]  # SUCCESS, FAILURE, PENDING, None
+    draft: bool = False
+
+
 def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
     """Parse ISO format datetime, handling 'unknown' and None."""
     if not value or value == "unknown":
@@ -146,6 +161,53 @@ class BearingState:
     def get_workflow_for_branch(self, repo: str, branch: str) -> Optional[WorkflowEntry]:
         """Get workflow entry for a repo/branch."""
         for entry in self.read_workflow():
+            if entry.repo == repo and entry.branch == branch:
+                return entry
+        return None
+
+    def read_prs(self) -> list[PREntry]:
+        """Read prs.jsonl - cached PR data."""
+        entries = _read_jsonl(self.workspace_dir / "prs.jsonl")
+        return [
+            PREntry(
+                repo=e["repo"],
+                number=e["number"],
+                title=e.get("title", ""),
+                state=e.get("state", "OPEN"),
+                branch=e.get("branch", ""),
+                base_branch=e.get("baseBranch", "main"),
+                author=e.get("author", ""),
+                updated=_parse_datetime(e.get("updated")),
+                checks=e.get("checks"),
+                draft=e.get("draft", False),
+            )
+            for e in entries
+        ]
+
+    def get_prs_for_project(self, repo: str) -> list[PREntry]:
+        """Get PRs for a specific repo, sorted: open first, then by updated."""
+        prs = [p for p in self.read_prs() if p.repo == repo]
+        # Sort: OPEN first, then by updated (newest first)
+        state_order = {"OPEN": 0, "DRAFT": 1, "MERGED": 2, "CLOSED": 3}
+        prs.sort(key=lambda p: (
+            state_order.get(p.state, 4),
+            -(p.updated.timestamp() if p.updated else 0)
+        ))
+        return prs
+
+    def get_all_prs(self) -> list[PREntry]:
+        """Get all PRs, sorted: open first, then by updated."""
+        prs = self.read_prs()
+        state_order = {"OPEN": 0, "DRAFT": 1, "MERGED": 2, "CLOSED": 3}
+        prs.sort(key=lambda p: (
+            state_order.get(p.state, 4),
+            -(p.updated.timestamp() if p.updated else 0)
+        ))
+        return prs
+
+    def get_worktree_for_branch(self, repo: str, branch: str) -> Optional[LocalEntry]:
+        """Find worktree that matches a branch."""
+        for entry in self.read_local():
             if entry.repo == repo and entry.branch == branch:
                 return entry
         return None
