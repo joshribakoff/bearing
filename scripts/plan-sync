@@ -77,14 +77,24 @@ for project_dir in $plan_dirs; do
         issue=$(get_frontmatter "$file" "github_issue")
         synced_at=$(get_frontmatter "$file" "synced_at")
 
-        # Skip files without frontmatter
-        [ -z "$title" ] && continue
+        # Auto-infer title from first markdown heading if missing
+        if [ -z "$title" ]; then
+            title=$(grep -m 1 '^# ' "$file" | sed 's/^# //')
+            if [ -z "$title" ]; then
+                echo "  ⊘ $filename (no title or heading)"
+                ((skipped++))
+                continue
+            fi
+        fi
 
-        # Skip files without repo configured
+        # Auto-infer repo from path if missing
         if [ -z "$repo" ]; then
-            echo "  ⊘ $filename (no repo configured)"
-            ((skipped++))
-            continue
+            repo=$(gh repo list --json nameWithOwner --limit 100 -q ".[].nameWithOwner" 2>/dev/null | grep -i "/$project$" | head -1)
+            if [ -z "$repo" ]; then
+                echo "  ⊘ $filename (no repo configured)"
+                ((skipped++))
+                continue
+            fi
         fi
 
         # Load adapter for this repo
