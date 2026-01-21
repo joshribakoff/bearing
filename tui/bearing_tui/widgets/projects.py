@@ -8,19 +8,6 @@ from rich.text import Text
 class ProjectListItem(ListItem):
     """ListItem that stores the original project name and count."""
 
-    DEFAULT_CSS = """
-    ProjectListItem {
-        height: 1;
-        padding: 0 1;
-    }
-    ProjectListItem.-highlight {
-        background: #264f78;
-    }
-    ProjectListItem:focus.-highlight {
-        background: #2d5a8a;
-    }
-    """
-
     def __init__(self, project: str, count: int = 0, **kwargs) -> None:
         super().__init__(**kwargs)
         self.project = project
@@ -36,24 +23,6 @@ class ProjectListItem(ListItem):
 
 class ProjectList(ListView):
     """Left panel showing list of repos/projects."""
-
-    DEFAULT_CSS = """
-    ProjectList {
-        background: #252526;
-    }
-    ProjectList > ProjectListItem.-highlight {
-        background: #264f78;
-    }
-    ProjectList:focus > ProjectListItem.-highlight {
-        background: #2d5a8a;
-    }
-    ProjectList > ListItem.-highlight {
-        background: #264f78;
-    }
-    ProjectList:focus > ListItem.-highlight {
-        background: #2d5a8a;
-    }
-    """
 
     class ProjectSelected(Message):
         """Emitted when a project is selected."""

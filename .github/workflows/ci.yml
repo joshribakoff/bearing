@@ -7,7 +7,7 @@ on:
     branches: [main, go-rewrite]
 
 jobs:
-  build-and-test:
+  go-build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,3 +33,34 @@ jobs:
         run: make integration
         env:
           BEARING_AI_ENABLED: '0'
+
+  tui-build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install TUI
+        run: |
+          cd tui
+          pip install -e ".[dev]"
+
+      - name: Run tests
+        run: |
+          cd tui
+          make test
+
+      - name: Generate screenshots
+        run: |
+          cd tui
+          make screenshot
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: tui-screenshots
+          path: tui/assets/*.svg

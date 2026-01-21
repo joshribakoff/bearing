@@ -105,27 +105,27 @@ ProjectList {
     border: none;
 }
 
-ProjectList > ListItem {
+ProjectListItem {
     padding: 0 1;
     height: 1;
     background: transparent;
     color: $text;
 }
 
-ProjectList > ListItem:hover {
+ProjectListItem:hover {
     background: $bg-highlight;
 }
 
 /* Highlighted item - always show with blue background */
-ProjectList ListItem.-highlight {
-    background: $bg-selection !important;
-    color: $text-bright !important;
+ProjectListItem.-highlight {
+    background: $bg-selection;
+    color: $text-bright;
 }
 
 /* When focused, make it slightly brighter */
-ProjectList:focus ListItem.-highlight {
-    background: #2d5a8a !important;
-    color: $text-bright !important;
+ProjectList:focus ProjectListItem.-highlight {
+    background: #2d5a8a;
+    color: $text-bright;
     text-style: bold;
 }
 
@@ -146,14 +146,14 @@ WorktreeTable > .datatable--header {
 
 /* Cursor when table has focus - bright selection */
 WorktreeTable:focus > .datatable--cursor {
-    background: $bg-selection;
+    background: #2d5a8a;
     color: $text-bright;
     text-style: bold;
 }
 
 /* Cursor when table doesn't have focus - dimmer but visible */
 WorktreeTable > .datatable--cursor {
-    background: #1e3a5f;
+    background: $bg-selection;
     color: $text;
 }
 
