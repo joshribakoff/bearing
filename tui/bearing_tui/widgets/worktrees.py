@@ -59,9 +59,9 @@ class WorktreeTable(DataTable):
         return self._hide_closed
 
     def _setup_columns(self) -> None:
-        """Add table columns - ordered by actionability."""
-        # PR first (most actionable), then context (branch/plan/issue), then status
-        self.add_columns("PR", "Branch", "Plan", "Issue", "Dirty", "Base")
+        """Add table columns - ordered by actionability, branch last."""
+        # PR status and title first (most actionable), then plan/issue, then branch last
+        self.add_columns("PR", "Title", "Plan", "Issue", "Dirty", "Branch")
 
     def on_mount(self) -> None:
         """Set up table when mounted."""
@@ -86,6 +86,7 @@ class WorktreeTable(DataTable):
         for wt in worktrees:
             health = health_map.get(wt.folder)
             pr_state = health.pr_state if health and health.pr_state else None
+            pr_title = health.pr_title if health and health.pr_title else None
 
             # Style PR status with icon and color
             if pr_state and pr_state in PR_STYLES:
@@ -98,23 +99,31 @@ class WorktreeTable(DataTable):
 
             # Gray out entire row if closed/merged
             row_style = "dim" if is_closed else ""
+
+            # PR title (truncate if too long)
+            title_text = pr_title[:30] + "…" if pr_title and len(pr_title) > 30 else (pr_title or "-")
+            title = Text(title_text, style=row_style)
+
             plan = Text(wt.plan or "-", style=row_style)
             issue = Text(f"#{wt.issue}" if wt.issue else "-", style=row_style)
-            branch = Text(wt.branch, style=row_style)
-            dirty = Text("●", style="yellow") if health and health.dirty else Text("")
-            base = Text("★", style="cyan") if wt.base else Text("")
 
-            self._all_entries.append((pr_display, branch, plan, issue, dirty, base, wt.folder, is_closed))
+            # Branch with star for base (replaces separate base column)
+            branch_text = f"★ {wt.branch}" if wt.base else wt.branch
+            branch = Text(branch_text, style="cyan" if wt.base else row_style)
+
+            dirty = Text("●", style="yellow") if health and health.dirty else Text("")
+
+            self._all_entries.append((pr_display, title, plan, issue, dirty, branch, wt.folder, is_closed))
 
         self._apply_filter()
 
     def _apply_filter(self) -> None:
         """Apply current filter settings to display."""
         self.clear()
-        for pr, branch, plan, issue, dirty, base, folder, is_closed in self._all_entries:
+        for pr, title, plan, issue, dirty, branch, folder, is_closed in self._all_entries:
             if self._hide_closed and is_closed:
                 continue
-            self.add_row(pr, branch, plan, issue, dirty, base, key=folder)
+            self.add_row(pr, title, plan, issue, dirty, branch, key=folder)
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection and emit WorktreeSelected message."""
@@ -124,4 +133,4 @@ class WorktreeTable(DataTable):
     def clear_worktrees(self) -> None:
         """Clear the table and show empty state."""
         self.clear()
-        self.add_row("-", "Select a project", "-", "-", "", "", key="empty")
+        self.add_row("-", "Select a project", "-", "-", "", "-", key="empty")
