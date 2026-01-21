@@ -91,7 +91,51 @@ For when you want to run things manually:
 | `bearing worktree list` | See all worktrees |
 | `bearing worktree cleanup myapp feature` | Remove after merge |
 | `bearing worktree status` | Health check (dirty, PRs) |
+| `bearing plan sync` | Sync plans to/from GitHub issues |
 | `bearing-tui` | Launch the terminal UI |
+
+---
+
+## 📋 Plan Sync
+
+Track feature plans as markdown files and sync them to GitHub issues.
+
+```
+~/Projects/plans/
+├── myapp/
+│   ├── 001-auth-refactor.md    # Links to issue #42
+│   └── 002-api-redesign.md     # Links to issue #43
+└── api-server/
+    └── 001-graphql.md
+```
+
+**Plan frontmatter:**
+```yaml
+---
+title: Auth Refactor
+github_repo: user/myapp
+github_issue: 42
+status: active
+---
+```
+
+**Commands:**
+- `bearing plan sync` — Bidirectional sync (newer wins)
+- `bearing plan sync --prefer-remote` — Remote changes win conflicts
+- `bearing plan sync --dry-run` — Preview changes
+
+---
+
+## 🖥️ TUI Features
+
+Press `p` in the TUI to browse plans. Press `o` to open the linked GitHub issue.
+
+**Keybindings:**
+- `0/1/2` — Focus panels
+- `j/k` — Navigate
+- `p` — Plans browser
+- `o` — Open PR/issue
+- `?` — Help
 
 ---
 

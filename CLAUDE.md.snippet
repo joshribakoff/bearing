@@ -27,7 +27,19 @@ worktree-list                        # View all worktrees
 worktree-new myrepo feature-branch   # Create worktree
 worktree-cleanup myrepo feature-branch  # Remove after merge
 worktree-sync                        # Rebuild manifest from git
+plan-sync                            # Sync plans to GitHub issues
 ```
+
+## Plan Sync
+
+Plans in `~/Projects/plans/<project>/*.md` sync to GitHub issues:
+- Add `github_repo` and `github_issue` frontmatter to link
+- `plan-sync` pushes local changes or pulls remote updates
+- `plan-sync --dry-run` previews changes
+
+## TUI
+
+Run `bearing-tui` to browse projects, worktrees, and plans visually. Press `p` for plans, `o` to open PRs/issues.
 
 ## Recovery
 

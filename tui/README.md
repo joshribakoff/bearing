@@ -65,6 +65,8 @@ Press `?` for full keybinding help.
 | `c` | Cleanup worktree |
 | `r` | Refresh data |
 | `d` | Toggle daemon |
+| `p` | Plans browser |
+| `o` | Open PR in browser |
 | `?` | Show help |
 | `q` | Quit |
 
@@ -108,9 +110,25 @@ async def test_keyboard_navigation(workspace):
         assert isinstance(app.focused, WorktreeTable)
 ```
 
+## Plans Browser
+
+Press `p` to open the plans browser. Plans are loaded from `~/Projects/plans/<project>/*.md`.
+
+**Plan frontmatter:**
+```yaml
+---
+title: Feature Name
+github_repo: user/repo
+github_issue: 42
+status: active
+---
+```
+
+Press `o` in the plans browser to open the linked GitHub issue.
+
 ## Architecture
 
 - **app.py** - Main Textual App with layout and keybindings
 - **state.py** - Reads JSONL state files, auto-detects workspace
-- **widgets/** - Reusable Textual widgets (ProjectList, WorktreeTable, DetailsPanel)
+- **widgets/** - Reusable Textual widgets (ProjectList, WorktreeTable, DetailsPanel, PlansList)
 - **styles/app.tcss** - Textual CSS for Darcula-inspired theme
