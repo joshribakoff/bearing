@@ -31,7 +31,8 @@ class HelpScreen(ModalScreen):
 
     BINDINGS = [
         Binding("escape", "dismiss", "Close"),
-        Binding("q", "dismiss", "Close"),
+        Binding("q", "app.quit", "Quit"),
+        Binding("ctrl+c", "app.quit", "Quit", show=False),
         Binding("question_mark", "dismiss", "Close"),
     ]
 
@@ -70,7 +71,8 @@ class PlansScreen(ModalScreen):
 
     BINDINGS = [
         Binding("escape", "dismiss", "Close"),
-        Binding("q", "dismiss", "Close"),
+        Binding("q", "app.quit", "Quit"),
+        Binding("ctrl+c", "app.quit", "Quit", show=False),
         Binding("p", "dismiss", "Close"),
         Binding("j", "cursor_down", "Down", show=False),
         Binding("k", "cursor_up", "Up", show=False),
