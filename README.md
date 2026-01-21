@@ -25,17 +25,17 @@
 
 ## 💡 The Philosophy
 
-**Vibe with a single agent.** You work in one conversation with one orchestrating agent. No terminal flipping. No context fragmentation. When you need parallel work, the agent delegates to background sub-agents and keeps you posted.
+**Vibe with a single agent.** You work in one conversation with one orchestrating agent. No terminal flipping. No context fragmentation. When you *ask* for parallel work, the agent delegates to background sub-agents and keeps you posted.
 
-**You control concurrency.** You decide what runs in parallel, what to background, what needs your attention. The agent orchestrates, but you're always in the loop.
+**You control concurrency.** Bearing doesn't automatically spawn AI agents. *You* explicitly tell Claude when to parallelize ("run these in background agents"). You decide what runs in parallel, what to background, what needs your attention. The agent orchestrates, but you're always in the loop.
 
-**Not another framework.** This isn't some third-party agent framework you install. It's just Claude Code receiving hooks and instructions from Bearing. Fire up normal `claude` CLI and go.
+**Not another framework.** This isn't some third-party agent framework you install. It's just Claude Code receiving instructions from CLAUDE.md. Fire up normal `claude` CLI and go. No API calls, no automation — just a workflow pattern for working with AI.
 
 **File system as interface.** Your workspace is laid out for parallel swarms — worktrees for isolation, JSONL files for state, `plans/` for tracking work. No databases. No services. Just files.
 
 **Pattern over tool.** Bearing is more of a philosophy than a product. We provide tools (CLI, TUI, daemon) but the core idea is the workflow pattern itself. Fork it. Adapt it. Make it yours.
 
-**AI for your AI.** Not an agent orchestrator. A *multiplier*. One Claude session sees all your plans across all repos. Say "implement all the auth-related plans" and watch it spin up 20 PRs across 5 repos. No session management. No workflow definitions. Just amplified capability.
+**AI for your AI.** Not an agent orchestrator. A *multiplier*. One Claude session sees all your plans across all repos. Say "implement all the auth-related plans with parallel background agents" and watch it spin up 20 PRs across 5 repos. The parallelism is opt-in — you can also run multiple `claude` sessions manually, each in its own worktree.
 
 ---
 
