@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -59,7 +60,7 @@ type Issue struct {
 
 // GetIssue fetches an issue by number
 func (c *Client) GetIssue(number int) (*Issue, error) {
-	cmd := exec.Command("gh", "issue", "view", string(rune(number)), "--json", "number,title,body,state,labels")
+	cmd := exec.Command("gh", "issue", "view", strconv.Itoa(number), "--json", "number,title,body,state,labels")
 	cmd.Dir = c.repoPath
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -73,4 +74,40 @@ func (c *Client) GetIssue(number int) (*Issue, error) {
 		return nil, err
 	}
 	return &issue, nil
+}
+
+// CreateIssueResult contains the result of creating an issue
+type CreateIssueResult struct {
+	Number int    `json:"number"`
+	URL    string `json:"url"`
+}
+
+// CreateIssue creates a new GitHub issue and returns its number
+func (c *Client) CreateIssue(title, body string, labels []string) (*CreateIssueResult, error) {
+	args := []string{"issue", "create", "--title", title, "--body", body, "--json", "number,url"}
+	for _, label := range labels {
+		args = append(args, "--label", label)
+	}
+	cmd := exec.Command("gh", args...)
+	cmd.Dir = c.repoPath
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return nil, err
+	}
+
+	var result CreateIssueResult
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// UpdateIssue updates an existing issue
+func (c *Client) UpdateIssue(number int, body string) error {
+	cmd := exec.Command("gh", "issue", "edit", strconv.Itoa(number), "--body", body)
+	cmd.Dir = c.repoPath
+	return cmd.Run()
 }
