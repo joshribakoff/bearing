@@ -25,17 +25,22 @@
 
 ## 💡 The Philosophy
 
-**Vibe with a single agent.** You work in one conversation with one orchestrating agent. No terminal flipping. No context fragmentation. When you *ask* for parallel work, the agent delegates to background sub-agents and keeps you posted.
+**The best orchestrator for Claude is Claude.**
 
-**You control concurrency.** Bearing doesn't automatically spawn AI agents. *You* explicitly tell Claude when to parallelize ("run these in background agents"). You decide what runs in parallel, what to background, what needs your attention. The agent orchestrates, but you're always in the loop.
+Bearing is not an orchestration framework. It's *infrastructure* that enables Claude to orchestrate itself.
 
-**Not another framework.** This isn't some third-party agent framework you install. It's just Claude Code receiving instructions from CLAUDE.md. Fire up normal `claude` CLI and go. No API calls, no automation — just a workflow pattern for working with AI.
+**Claude orchestrates, not Bearing.** You work in one conversation with one Claude agent. When you ask for parallel work, *Claude* decides how to delegate to background sub-agents. Bearing just provides the isolation (worktrees) and state (JSONL files) so those agents don't conflict.
 
-**File system as interface.** Your workspace is laid out for parallel swarms — worktrees for isolation, JSONL files for state, `plans/` for tracking work. No databases. No services. Just files.
+**Infrastructure, not framework.** Bearing provides:
+- **Worktree management** — Isolated directories so parallel agents don't conflict
+- **Plan visualization** — TUI to see all plans across repos
+- **State sync** — JSONL files synced to GitHub issues for persistence
+- **Query tools** — CLI commands agents can use to understand workspace state
+- **Hooks** — Feed context to Claude Code agents automatically
 
-**Pattern over tool.** Bearing is more of a philosophy than a product. We provide tools (CLI, TUI, daemon) but the core idea is the workflow pattern itself. Fork it. Adapt it. Make it yours.
+**File system as interface.** Your workspace is laid out for parallel work — worktrees for isolation, JSONL files for state, `plans/` for tracking work. No databases. No services. Just files that Claude can read and write.
 
-**AI for your AI.** Not an agent orchestrator. A *multiplier*. One Claude session sees all your plans across all repos. Say "implement all the auth-related plans with parallel background agents" and watch it spin up 20 PRs across 5 repos. The parallelism is opt-in — you can also run multiple `claude` sessions manually, each in its own worktree.
+**Pattern over product.** Bearing is more of a philosophy than a tool. We provide utilities (CLI, TUI, daemon) but the core idea is the workflow pattern itself. Fork it. Adapt it. Make it yours.
 
 ---
 
