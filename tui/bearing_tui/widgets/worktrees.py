@@ -13,7 +13,8 @@ class WorktreeEntry:
     repo: str
     branch: str
     base: bool = False
-    purpose: str | None = None
+    plan: str | None = None
+    issue: str | None = None
 
 
 @dataclass
@@ -40,7 +41,7 @@ class WorktreeTable(DataTable):
 
     def _setup_columns(self) -> None:
         """Add table columns."""
-        self.add_columns("Branch", "Purpose", "Dirty", "Unpushed", "PR", "Base")
+        self.add_columns("Branch", "Plan", "Issue", "Dirty", "Unpushed", "PR", "Base")
 
     def on_mount(self) -> None:
         """Set up table when mounted."""
@@ -56,17 +57,18 @@ class WorktreeTable(DataTable):
         self.clear()
 
         if not worktrees:
-            self.add_row("No worktrees", "", "", "", "", "", key="empty")
+            self.add_row("No worktrees", "", "", "", "", "", "", key="empty")
             return
 
         for wt in worktrees:
             health = health_map.get(wt.folder)
-            purpose = (wt.purpose[:30] + "...") if wt.purpose and len(wt.purpose) > 30 else (wt.purpose or "-")
+            plan = wt.plan or "-"
+            issue = f"#{wt.issue}" if wt.issue else "-"
             dirty = "\u25cf" if health and health.dirty else ""
             unpushed = str(health.unpushed) if health and health.unpushed else "-"
             pr = health.pr_state if health and health.pr_state else "-"
             base = "\u2605" if wt.base else ""
-            self.add_row(wt.branch, purpose, dirty, unpushed, pr, base, key=wt.folder)
+            self.add_row(wt.branch, plan, issue, dirty, unpushed, pr, base, key=wt.folder)
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Handle row selection and emit WorktreeSelected message."""
@@ -76,4 +78,4 @@ class WorktreeTable(DataTable):
     def clear_worktrees(self) -> None:
         """Clear the table and show empty state."""
         self.clear()
-        self.add_row("Select a project", "", "", "", "", "", key="empty")
+        self.add_row("Select a project", "", "", "", "", "", "", key="empty")

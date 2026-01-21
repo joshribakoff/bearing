@@ -128,7 +128,6 @@ class BearingApp(App):
         Binding("c", "cleanup", "Cleanup"),
         Binding("r", "refresh", "Refresh"),
         Binding("R", "force_refresh", "Force Refresh", show=False),
-        Binding("d", "daemon", "Daemon"),
         Binding("o", "open_pr", "Open PR", show=False),
         Binding("p", "show_plans", "Plans"),
         # Panel navigation by number (0-indexed)
@@ -390,15 +389,38 @@ class BearingApp(App):
         """Update worktree table for selected project."""
         worktrees = self.state.get_worktrees_for_project(project)
 
+        # Load plans and create lookup by branch name
+        plans = load_plans(self.workspace)
+        plan_by_branch: dict[str, tuple[str, str | None]] = {}
+        for plan in plans:
+            if plan.project == project:
+                # Extract branch from plan filename or frontmatter
+                # Plan files are like "022-tui-planning-view-v2.md" -> branch might be "tui-planning-view-v2"
+                plan_name = plan.file_path.stem  # e.g., "022-tui-planning-view-v2"
+                # Try to match branch names that contain the plan suffix
+                parts = plan_name.split("-", 1)
+                if len(parts) > 1:
+                    branch_hint = parts[1]  # e.g., "tui-planning-view-v2"
+                    plan_by_branch[branch_hint] = (plan_name, plan.issue)
+
         wt_entries = []
         for w in worktrees:
-            workflow = self.state.get_workflow_for_branch(w.repo, w.branch)
+            # Try to find matching plan by branch name
+            plan_name = None
+            plan_issue = None
+            for branch_hint, (pname, pissue) in plan_by_branch.items():
+                if branch_hint in w.branch or w.branch in branch_hint:
+                    plan_name = pname
+                    plan_issue = pissue
+                    break
+
             wt_entries.append(WorktreeEntry(
                 folder=w.folder,
                 repo=w.repo,
                 branch=w.branch,
                 base=w.base,
-                purpose=workflow.purpose if workflow else None,
+                plan=plan_name,
+                issue=plan_issue,
             ))
 
         health_map = {}
