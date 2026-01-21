@@ -4,6 +4,7 @@ from .worktrees import WorktreeTable, WorktreeEntry, HealthEntry
 from .details import DetailsPanel, LocalEntry, WorkflowEntry
 from .details import HealthEntry as DetailsHealthEntry
 from .plans import PlansList, PlanEntry, load_plans
+from .prs import PRsTable, PRDisplayEntry
 
 __all__ = [
     "ProjectList",
@@ -16,4 +17,6 @@ __all__ = [
     "PlansList",
     "PlanEntry",
     "load_plans",
+    "PRsTable",
+    "PRDisplayEntry",
 ]
