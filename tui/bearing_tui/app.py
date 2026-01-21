@@ -309,6 +309,8 @@ class BearingApp(App):
         """Refresh data from files, preserving current selection."""
         # Save current selection
         saved_project = self._current_project
+        worktree_table = self.query_one(WorktreeTable)
+        saved_cursor = worktree_table.cursor_row if worktree_table.row_count > 0 else None
 
         projects = self.state.get_projects()
 
@@ -324,9 +326,11 @@ class BearingApp(App):
         # Restore selection if project still exists
         if saved_project and saved_project in projects:
             self._select_project(saved_project)
+            # Restore worktree cursor position
+            if saved_cursor is not None and worktree_table.row_count > saved_cursor:
+                worktree_table.cursor_coordinate = (saved_cursor, 0)
         else:
             # Clear worktree table and details only if no selection to restore
-            worktree_table = self.query_one(WorktreeTable)
             worktree_table.clear_worktrees()
             details = self.query_one(DetailsPanel)
             details.clear()
