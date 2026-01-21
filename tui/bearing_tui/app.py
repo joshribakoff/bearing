@@ -307,7 +307,10 @@ class BearingApp(App):
         self.push_screen(PlansScreen(self.workspace))
 
     def action_refresh(self) -> None:
-        """Refresh data from files."""
+        """Refresh data from files, preserving current selection."""
+        # Save current selection
+        saved_project = self._current_project
+
         projects = self.state.get_projects()
 
         # Count worktrees per project
@@ -319,12 +322,16 @@ class BearingApp(App):
         project_list = self.query_one(ProjectList)
         project_list.set_projects(projects, counts)
 
-        # Clear worktree table and details
-        worktree_table = self.query_one(WorktreeTable)
-        worktree_table.clear_worktrees()
-        details = self.query_one(DetailsPanel)
-        details.clear()
-        self._current_project = None
+        # Restore selection if project still exists
+        if saved_project and saved_project in projects:
+            self._select_project(saved_project)
+        else:
+            # Clear worktree table and details only if no selection to restore
+            worktree_table = self.query_one(WorktreeTable)
+            worktree_table.clear_worktrees()
+            details = self.query_one(DetailsPanel)
+            details.clear()
+            self._current_project = None
 
         self.notify("Data refreshed", timeout=2)
 
@@ -376,6 +383,8 @@ class BearingApp(App):
         """Handle project selection."""
         self._current_project = event.project
         self._update_worktree_table(event.project)
+        # Auto-focus worktrees panel after selecting a project
+        self.query_one(WorktreeTable).focus()
 
     def _update_worktree_table(self, project: str) -> None:
         """Update worktree table for selected project."""
@@ -402,6 +411,23 @@ class BearingApp(App):
                     unpushed=health.unpushed,
                     pr_state=health.pr_state,
                 )
+
+        # Sort worktrees: Open PRs first, then Draft, then others, base worktrees last
+        def sort_key(entry: WorktreeEntry) -> tuple:
+            health = health_map.get(entry.folder)
+            pr_state = health.pr_state if health else None
+            # Priority: OPEN=0, DRAFT=1, other PR=2, no PR=3, base=4
+            if entry.base:
+                return (4, entry.branch)
+            if pr_state == "OPEN":
+                return (0, entry.branch)
+            if pr_state == "DRAFT":
+                return (1, entry.branch)
+            if pr_state:  # MERGED, CLOSED, etc.
+                return (2, entry.branch)
+            return (3, entry.branch)
+
+        wt_entries.sort(key=sort_key)
 
         worktree_table = self.query_one(WorktreeTable)
         worktree_table.set_worktrees(wt_entries, health_map)
