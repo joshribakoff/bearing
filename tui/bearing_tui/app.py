@@ -130,6 +130,7 @@ class BearingApp(App):
         Binding("R", "force_refresh", "Force Refresh", show=False),
         Binding("o", "open_pr", "Open PR", show=False),
         Binding("p", "show_plans", "Plans"),
+        Binding("x", "toggle_closed", "Toggle Closed", show=False),
         # Panel navigation by number (0-indexed)
         Binding("0", "focus_panel_0", "Projects", show=False),
         Binding("1", "focus_panel_1", "Worktrees", show=False),
@@ -538,6 +539,12 @@ class BearingApp(App):
     def action_cleanup(self) -> None:
         """Cleanup a worktree (placeholder)."""
         self.notify("Cleanup: not yet implemented", timeout=2)
+
+    def action_toggle_closed(self) -> None:
+        """Toggle visibility of closed/merged PRs."""
+        worktree_table = self.query_one(WorktreeTable)
+        hidden = worktree_table.toggle_hide_closed()
+        self.notify(f"Closed PRs: {'hidden' if hidden else 'shown'}", timeout=2)
 
     def action_daemon(self) -> None:
         """Check daemon status and trigger health refresh if running."""
