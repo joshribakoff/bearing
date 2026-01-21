@@ -218,16 +218,16 @@ class BearingApp(App):
         except Exception:
             pass  # Don't fail on session save errors
 
-    def _restore_session(self) -> None:
-        """Restore full UI state from session file if recent."""
+    def _restore_session(self) -> bool:
+        """Restore full UI state from session file if recent. Returns True if restored."""
         try:
             if not self._session_file.exists():
-                return
+                return False
             session = json.loads(self._session_file.read_text())
             timestamp = datetime.fromisoformat(session.get("timestamp", ""))
             # Only restore if < 24 hours old
             if datetime.now() - timestamp > timedelta(hours=24):
-                return
+                return False
 
             # Restore project selection
             project = session.get("selected_project")
@@ -246,12 +246,11 @@ class BearingApp(App):
             # Restore focused panel
             focused_panel = session.get("focused_panel")
             if focused_panel:
-                try:
-                    self.query_one(f"#{focused_panel}").focus()
-                except Exception:
-                    pass
+                self.query_one(f"#{focused_panel}").focus()
+                return True
+            return False
         except Exception:
-            pass  # Don't fail on session restore errors
+            return False  # Don't fail on session restore errors
 
     def _update_details_for_cursor(self, cursor_row: int) -> None:
         """Update details panel for worktree at cursor position."""
@@ -278,9 +277,9 @@ class BearingApp(App):
     def on_mount(self) -> None:
         """Load data when app mounts."""
         self.action_refresh()
-        self._restore_session()
-        # Focus the project list initially
-        self.query_one("#project-list", ProjectList).focus()
+        # Restore session (includes focus) or default to project list
+        if not self._restore_session():
+            self.query_one("#project-list", ProjectList).focus()
 
     def action_show_help(self) -> None:
         """Show the help modal."""
