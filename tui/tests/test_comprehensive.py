@@ -455,8 +455,8 @@ async def test_details_shows_all_fields(workspace):
 
 
 @pytest.mark.asyncio
-async def test_details_clears_on_refresh(workspace):
-    """Test that details panel clears when refresh is triggered."""
+async def test_details_preserved_on_refresh(workspace):
+    """Test that details panel is preserved when refresh is triggered."""
     app = BearingApp(workspace=workspace)
     async with app.run_test(size=(100, 25)) as pilot:
         await pilot.pause()
@@ -474,13 +474,14 @@ async def test_details_clears_on_refresh(workspace):
         details = app.query_one(DetailsPanel)
         # After selecting, should have folder set
         assert details.current_folder is not None
+        saved_folder = details.current_folder
 
         # Refresh
         await pilot.press("r")
         await pilot.pause()
 
-        # After refresh, details should be cleared
-        assert details.current_folder is None
+        # After refresh, details should be preserved (not cleared)
+        assert details.current_folder == saved_folder
 
 
 # ============================================================================

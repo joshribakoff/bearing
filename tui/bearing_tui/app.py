@@ -128,9 +128,9 @@ class BearingApp(App):
         Binding("c", "cleanup", "Cleanup"),
         Binding("r", "refresh", "Refresh"),
         Binding("R", "force_refresh", "Force Refresh", show=False),
-        Binding("d", "daemon", "Daemon"),
         Binding("o", "open_pr", "Open PR", show=False),
         Binding("p", "show_plans", "Plans"),
+        Binding("x", "toggle_closed", "Toggle Closed", show=False),
         # Panel navigation by number (0-indexed)
         Binding("0", "focus_panel_0", "Projects", show=False),
         Binding("1", "focus_panel_1", "Worktrees", show=False),
@@ -174,18 +174,7 @@ class BearingApp(App):
                 yield WorktreeTable(id="worktree-table")
         yield Label("[2] Details", classes="panel-header details-header")
         yield DetailsPanel(id="details-panel")
-        yield Static(
-            "[yellow]0[/]-[yellow]2[/] panels  "
-            "[yellow]j/k[/] nav  "
-            "[yellow]n[/]ew  "
-            "[yellow]c[/]leanup  "
-            "[yellow]r[/]efresh  "
-            "[yellow]o[/]pen PR  "
-            "[yellow]p[/]lans  "
-            "[yellow]?[/] help  "
-            "[yellow]q[/]uit",
-            id="footer-bar"
-        )
+        yield Footer()
 
     @property
     def _session_file(self) -> Path:
@@ -318,7 +307,12 @@ class BearingApp(App):
         self.push_screen(PlansScreen(self.workspace))
 
     def action_refresh(self) -> None:
-        """Refresh data from files."""
+        """Refresh data from files, preserving current selection."""
+        # Save current selection
+        saved_project = self._current_project
+        worktree_table = self.query_one(WorktreeTable)
+        saved_cursor = worktree_table.cursor_row if worktree_table.row_count > 0 else None
+
         projects = self.state.get_projects()
 
         # Count worktrees per project
@@ -328,14 +322,22 @@ class BearingApp(App):
             counts[entry.repo] = counts.get(entry.repo, 0) + 1
 
         project_list = self.query_one(ProjectList)
-        project_list.set_projects(projects, counts)
+        # Pass preserve_selection to maintain highlight during refresh
+        project_list.set_projects(projects, counts, preserve_selection=saved_project if saved_project in projects else None)
 
-        # Clear worktree table and details
-        worktree_table = self.query_one(WorktreeTable)
-        worktree_table.clear_worktrees()
-        details = self.query_one(DetailsPanel)
-        details.clear()
-        self._current_project = None
+        # Restore worktree data if project still exists
+        if saved_project and saved_project in projects:
+            self._current_project = saved_project
+            self._update_worktree_table(saved_project)
+            # Restore worktree cursor position
+            if saved_cursor is not None and worktree_table.row_count > saved_cursor:
+                worktree_table.cursor_coordinate = (saved_cursor, 0)
+        else:
+            # Clear worktree table and details only if no selection to restore
+            worktree_table.clear_worktrees()
+            details = self.query_one(DetailsPanel)
+            details.clear()
+            self._current_project = None
 
         self.notify("Data refreshed", timeout=2)
 
@@ -387,20 +389,45 @@ class BearingApp(App):
         """Handle project selection."""
         self._current_project = event.project
         self._update_worktree_table(event.project)
+        # Auto-focus worktrees panel after selecting a project
+        self.query_one(WorktreeTable).focus()
 
     def _update_worktree_table(self, project: str) -> None:
         """Update worktree table for selected project."""
         worktrees = self.state.get_worktrees_for_project(project)
 
+        # Load plans and create lookup by branch name
+        plans = load_plans(self.workspace)
+        plan_by_branch: dict[str, tuple[str, str | None]] = {}
+        for plan in plans:
+            if plan.project == project:
+                # Extract branch from plan filename or frontmatter
+                # Plan files are like "022-tui-planning-view-v2.md" -> branch might be "tui-planning-view-v2"
+                plan_name = plan.file_path.stem  # e.g., "022-tui-planning-view-v2"
+                # Try to match branch names that contain the plan suffix
+                parts = plan_name.split("-", 1)
+                if len(parts) > 1:
+                    branch_hint = parts[1]  # e.g., "tui-planning-view-v2"
+                    plan_by_branch[branch_hint] = (plan_name, plan.issue)
+
         wt_entries = []
         for w in worktrees:
-            workflow = self.state.get_workflow_for_branch(w.repo, w.branch)
+            # Try to find matching plan by branch name
+            plan_name = None
+            plan_issue = None
+            for branch_hint, (pname, pissue) in plan_by_branch.items():
+                if branch_hint in w.branch or w.branch in branch_hint:
+                    plan_name = pname
+                    plan_issue = pissue
+                    break
+
             wt_entries.append(WorktreeEntry(
                 folder=w.folder,
                 repo=w.repo,
                 branch=w.branch,
                 base=w.base,
-                purpose=workflow.purpose if workflow else None,
+                plan=plan_name,
+                issue=plan_issue,
             ))
 
         health_map = {}
@@ -412,7 +439,36 @@ class BearingApp(App):
                     dirty=health.dirty,
                     unpushed=health.unpushed,
                     pr_state=health.pr_state,
+                    pr_title=health.pr_title,
                 )
+
+        # Build workflow lookup for created dates (newest first like GitHub)
+        workflow_map = {}
+        for w in worktrees:
+            wf = self.state.get_workflow_for_branch(w.repo, w.branch)
+            if wf and wf.created:
+                workflow_map[w.folder] = wf.created
+
+        # Sort worktrees: Open PRs first, then Draft, then others, base worktrees last
+        # Within each category, sort by created date descending (newest first)
+        def sort_key(entry: WorktreeEntry) -> tuple:
+            health = health_map.get(entry.folder)
+            pr_state = health.pr_state if health else None
+            # Negative timestamp for descending order (newest first)
+            created = workflow_map.get(entry.folder)
+            created_sort = -created.timestamp() if created else 0
+            # Priority: OPEN=0, DRAFT=1, other PR=2, no PR=3, base=4
+            if entry.base:
+                return (4, created_sort, entry.branch)
+            if pr_state == "OPEN":
+                return (0, created_sort, entry.branch)
+            if pr_state == "DRAFT":
+                return (1, created_sort, entry.branch)
+            if pr_state:  # MERGED, CLOSED, etc.
+                return (2, created_sort, entry.branch)
+            return (3, created_sort, entry.branch)
+
+        wt_entries.sort(key=sort_key)
 
         worktree_table = self.query_one(WorktreeTable)
         worktree_table.set_worktrees(wt_entries, health_map)
@@ -495,6 +551,12 @@ class BearingApp(App):
     def action_cleanup(self) -> None:
         """Cleanup a worktree (placeholder)."""
         self.notify("Cleanup: not yet implemented", timeout=2)
+
+    def action_toggle_closed(self) -> None:
+        """Toggle visibility of closed/merged PRs."""
+        worktree_table = self.query_one(WorktreeTable)
+        hidden = worktree_table.toggle_hide_closed()
+        self.notify(f"Closed PRs: {'hidden' if hidden else 'shown'}", timeout=2)
 
     def action_daemon(self) -> None:
         """Check daemon status and trigger health refresh if running."""

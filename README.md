@@ -5,7 +5,7 @@
 <h1 align="center">⚓ Bearing</h1>
 
 <p align="center">
-  <strong>Worktree-based workflow for parallel AI-assisted development</strong>
+  <strong>An agentic coding philosophy. One conversation. Full control.</strong>
 </p>
 
 <p align="center">
@@ -16,23 +16,35 @@
 </p>
 
 <p align="center">
-  <a href="https://www.joshribakoff.com/blog/deliberate-ai-use/">📝 Blog Post</a> •
+  <a href="#-the-philosophy">💡 Philosophy</a> •
   <a href="https://bearing.dev">📖 Docs</a> •
   <a href="#-quick-start">🚀 Quick Start</a>
 </p>
 
 ---
 
-## ✨ Why Bearing?
+## 💡 The Philosophy
 
-When multiple AI agents work on the same codebase, **they step on each other**. Branch switching in shared folders causes conflicts, lost work, and chaos.
+**Vibe with a single agent.** You work in one conversation with one orchestrating agent. No terminal flipping. No context fragmentation. When you need parallel work, the agent delegates to background sub-agents and keeps you posted.
 
-**Bearing keeps every agent isolated** in its own worktree:
+**You control concurrency.** You decide what runs in parallel, what to background, what needs your attention. The agent orchestrates, but you're always in the loop.
 
-- 🔒 **No Conflicts** — Each task gets its own directory
-- 🚀 **Parallel Work** — Run 10 Claude sessions on 10 features at once
-- 📊 **Full Visibility** — See all active work in one place
-- ⚡ **Massive Scale** — Thousands of worktrees across hundreds of repos
+**Not another framework.** This isn't some third-party agent framework you install. It's just Claude Code receiving hooks and instructions from Bearing. Fire up normal `claude` CLI and go.
+
+**File system as interface.** Your workspace is laid out for parallel swarms — worktrees for isolation, JSONL files for state, `plans/` for tracking work. No databases. No services. Just files.
+
+**Pattern over tool.** Bearing is more of a philosophy than a product. We provide tools (CLI, TUI, daemon) but the core idea is the workflow pattern itself. Fork it. Adapt it. Make it yours.
+
+**AI for your AI.** Not an agent orchestrator. A *multiplier*. One Claude session sees all your plans across all repos. Say "implement all the auth-related plans" and watch it spin up 20 PRs across 5 repos. No session management. No workflow definitions. Just amplified capability.
+
+---
+
+## ✨ The Result
+
+- **No contention** — Background agents work in isolated worktrees
+- **No context bloat** — State lives in files, not your conversation
+- **Full visibility** — See all active work in one place
+- **Orchestrate everything** — From one conversation, coordinate many
 
 ---
 
@@ -53,15 +65,16 @@ git clone https://github.com/joshribakoff/bearing ~/Projects/bearing
 ~/Projects/bearing/install.sh
 ```
 
-### 2. Talk to Claude
+### 2. Vibe with Claude
 
 ```
 > Create a worktree for the auth feature
-> What worktrees do I have?
+> Kick off a background agent to refactor the API
+> What's the status of my parallel tasks?
 > Clean up the merged feature branch
 ```
 
-That's it. Bearing integrates with Claude Code's hooks — just ask Claude to manage your worktrees.
+That's it. Bearing integrates with Claude Code's hooks. You orchestrate from one conversation — the agent handles the rest.
 
 ---
 
@@ -146,5 +159,5 @@ Session is persisted across restarts (project, worktree selection, focused panel
 > ⚠️ **Fair Warning:** This thing was vibe-coded in an afternoon, rewritten in Go the same day, and had a TUI bolted on for good measure. The AI agent that built it dangerously skips permissions and merges its own PRs. Depend on it at your own peril. 🏴‍☠️
 
 <p align="center">
-  Made with ⚓ for the AI-assisted development era
+  One conversation. Many agents. Full control.
 </p>

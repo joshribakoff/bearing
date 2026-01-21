@@ -185,6 +185,7 @@ func (d *Daemon) runHealthCheck() {
 			ghClient := gh.NewClient(folderPath)
 			if pr, _ := ghClient.GetPR(e.Branch); pr != nil {
 				h.PRState = &pr.State
+				h.PRTitle = &pr.Title
 			}
 		}
 

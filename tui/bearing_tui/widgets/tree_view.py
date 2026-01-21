@@ -163,9 +163,9 @@ class WorktreeTreeView(Tree[WorktreeData | str]):
         if data.pr_state:
             pr_style = {
                 "open": "bold green",
-                "merged": "bold magenta",
-                "closed": "bold red",
-                "draft": "dim cyan",
+                "merged": "dim cyan",
+                "closed": "dim red",
+                "draft": "dim",  # Gray like GitHub
             }.get(data.pr_state.lower(), "white")
             indicators.append((data.pr_state.upper(), pr_style))
 

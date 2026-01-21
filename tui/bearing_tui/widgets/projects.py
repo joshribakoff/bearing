@@ -44,14 +44,23 @@ class ProjectList(ListView):
         if isinstance(event.item, ProjectListItem):
             self.post_message(self.ProjectSelected(event.item.project))
 
-    def set_projects(self, projects: list[str], counts: dict[str, int] | None = None) -> None:
-        """Update the project list with optional worktree counts."""
+    def set_projects(self, projects: list[str], counts: dict[str, int] | None = None, preserve_selection: str | None = None) -> None:
+        """Update the project list with optional worktree counts.
+
+        Args:
+            projects: List of project names
+            counts: Optional dict of project -> worktree count
+            preserve_selection: Project name to re-select after update
+        """
         self.projects = projects
         self._counts = counts or {}
         self.clear()
         if not projects:
             self.append(ListItem(Static("No projects found")))
         else:
-            for project in projects:
+            for i, project in enumerate(projects):
                 count = self._counts.get(project, 0)
                 self.append(ProjectListItem(project, count))
+                # Restore selection if this is the preserved project
+                if preserve_selection and project == preserve_selection:
+                    self.index = i
