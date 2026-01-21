@@ -7,11 +7,11 @@ from textual.widgets import DataTable
 from textual.message import Message
 
 
-# PR status styling: icon, color
+# PR status styling: icon, color (DRAFT is gray like GitHub shows)
 PR_STYLES = {
     "OPEN": ("●", "green"),
-    "DRAFT": ("○", "yellow"),
-    "MERGED": ("✓", "dim"),
+    "DRAFT": ("○", "dim"),
+    "MERGED": ("✓", "dim cyan"),
     "CLOSED": ("✗", "dim red"),
 }
 
@@ -34,6 +34,7 @@ class HealthEntry:
     dirty: bool = False
     unpushed: int = 0
     pr_state: str | None = None
+    pr_title: str | None = None
 
 
 class WorktreeTable(DataTable):

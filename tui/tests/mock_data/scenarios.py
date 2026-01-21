@@ -61,25 +61,25 @@ def create_normal_workspace() -> Path:
     health_entries = [
         # sailkit - showcase DRAFT and OPEN
         {"folder": "sailkit", "dirty": False, "unpushed": 0, "prState": None},
-        {"folder": "sailkit-compass-refactor", "dirty": True, "unpushed": 3, "prState": "DRAFT"},
-        {"folder": "sailkit-add-lantern-themes", "dirty": False, "unpushed": 0, "prState": "OPEN"},
+        {"folder": "sailkit-compass-refactor", "dirty": True, "unpushed": 3, "prState": "DRAFT", "prTitle": "Refactor compass for tree-shaking"},
+        {"folder": "sailkit-add-lantern-themes", "dirty": False, "unpushed": 0, "prState": "OPEN", "prTitle": "Add dark/light theme support"},
         # bearing - showcase OPEN, MERGED, and CLOSED
         {"folder": "bearing", "dirty": False, "unpushed": 0, "prState": None},
-        {"folder": "bearing-tui-improvements", "dirty": True, "unpushed": 5, "prState": "OPEN"},
-        {"folder": "bearing-health-checks", "dirty": False, "unpushed": 0, "prState": "MERGED"},
+        {"folder": "bearing-tui-improvements", "dirty": True, "unpushed": 5, "prState": "OPEN", "prTitle": "TUI: Improve navigation and focus"},
+        {"folder": "bearing-health-checks", "dirty": False, "unpushed": 0, "prState": "MERGED", "prTitle": "Add worktree health monitoring"},
         # fightingwithai - OPEN PR
         {"folder": "fightingwithai.com", "dirty": False, "unpushed": 0, "prState": None},
-        {"folder": "fightingwithai.com-vim-mode", "dirty": False, "unpushed": 1, "prState": "OPEN"},
+        {"folder": "fightingwithai.com-vim-mode", "dirty": False, "unpushed": 1, "prState": "OPEN", "prTitle": "Implement vim-style navigation"},
         # surfdeeper - mix including CLOSED
         {"folder": "surfdeeper", "dirty": True, "unpushed": 0, "prState": None},
-        {"folder": "surfdeeper-wave-forecast", "dirty": True, "unpushed": 2, "prState": "DRAFT"},
-        {"folder": "surfdeeper-spot-search", "dirty": False, "unpushed": 0, "prState": "CLOSED"},
+        {"folder": "surfdeeper-wave-forecast", "dirty": True, "unpushed": 2, "prState": "DRAFT", "prTitle": "Integrate NOAA wave forecast"},
+        {"folder": "surfdeeper-spot-search", "dirty": False, "unpushed": 0, "prState": "CLOSED", "prTitle": "Add fuzzy spot search"},
         {"folder": "surfdeeper-tide-charts", "dirty": True, "unpushed": 1, "prState": None},
         # portfolio
         {"folder": "portfolio", "dirty": False, "unpushed": 0, "prState": None},
         # api-server - OPEN PR with lots of unpushed
         {"folder": "api-server", "dirty": False, "unpushed": 0, "prState": None},
-        {"folder": "api-server-auth-refactor", "dirty": True, "unpushed": 8, "prState": "OPEN"},
+        {"folder": "api-server-auth-refactor", "dirty": True, "unpushed": 8, "prState": "OPEN", "prTitle": "Migrate to session-based auth"},
     ]
 
     _write_jsonl(workspace / "local.jsonl", local_entries)

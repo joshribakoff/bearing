@@ -439,22 +439,34 @@ class BearingApp(App):
                     dirty=health.dirty,
                     unpushed=health.unpushed,
                     pr_state=health.pr_state,
+                    pr_title=health.pr_title,
                 )
 
+        # Build workflow lookup for created dates (newest first like GitHub)
+        workflow_map = {}
+        for w in worktrees:
+            wf = self.state.get_workflow_for_branch(w.repo, w.branch)
+            if wf and wf.created:
+                workflow_map[w.folder] = wf.created
+
         # Sort worktrees: Open PRs first, then Draft, then others, base worktrees last
+        # Within each category, sort by created date descending (newest first)
         def sort_key(entry: WorktreeEntry) -> tuple:
             health = health_map.get(entry.folder)
             pr_state = health.pr_state if health else None
+            # Negative timestamp for descending order (newest first)
+            created = workflow_map.get(entry.folder)
+            created_sort = -created.timestamp() if created else 0
             # Priority: OPEN=0, DRAFT=1, other PR=2, no PR=3, base=4
             if entry.base:
-                return (4, entry.branch)
+                return (4, created_sort, entry.branch)
             if pr_state == "OPEN":
-                return (0, entry.branch)
+                return (0, created_sort, entry.branch)
             if pr_state == "DRAFT":
-                return (1, entry.branch)
+                return (1, created_sort, entry.branch)
             if pr_state:  # MERGED, CLOSED, etc.
-                return (2, entry.branch)
-            return (3, entry.branch)
+                return (2, created_sort, entry.branch)
+            return (3, created_sort, entry.branch)
 
         wt_entries.sort(key=sort_key)
 
