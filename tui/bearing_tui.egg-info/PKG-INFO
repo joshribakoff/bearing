@@ -5,3 +5,6 @@ Summary: Beautiful TUI for Bearing worktree management
 Requires-Python: >=3.10
 Requires-Dist: textual>=0.40.0
 Requires-Dist: rich>=13.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"

@@ -28,3 +28,10 @@ type HealthEntry struct {
 	PRState   *string   `json:"prState,omitempty"`
 	LastCheck time.Time `json:"lastCheck"`
 }
+
+// ProjectEntry maps project names to GitHub repos in projects.jsonl
+type ProjectEntry struct {
+	Name       string `json:"name"`
+	GitHubRepo string `json:"github_repo"`
+	Path       string `json:"path"`
+}

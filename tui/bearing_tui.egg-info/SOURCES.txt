@@ -13,7 +13,9 @@ bearing_tui.egg-info/top_level.txt
 bearing_tui/widgets/__init__.py
 bearing_tui/widgets/details.py
 bearing_tui/widgets/details_panel.py
+bearing_tui/widgets/plans.py
 bearing_tui/widgets/project_list.py
 bearing_tui/widgets/projects.py
 bearing_tui/widgets/worktree_table.py
 bearing_tui/widgets/worktrees.py
+tests/test_app.py

@@ -98,7 +98,7 @@ func TestParsePlanFile_NonNumericIssue(t *testing.T) {
 		{"numeric", "123", false},
 		{"alpha", "abc", true},
 		{"mixed", "123abc", true},
-		{"empty", "", true},
+		{"empty", "", false}, // empty is valid (triggers auto-create)
 		{"with hash", "#123", true},
 		{"float", "12.34", true},
 		{"negative", "-5", true},

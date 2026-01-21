@@ -83,15 +83,53 @@ That's it. Bearing integrates with Claude Code's hooks — just ask Claude to ma
 
 ## 🛠️ CLI Commands
 
-For when you want to run things manually:
-
 | Command | What it does |
 |---------|-------------|
 | `bearing worktree new myapp feature` | Create a worktree |
 | `bearing worktree list` | See all worktrees |
 | `bearing worktree cleanup myapp feature` | Remove after merge |
 | `bearing worktree status` | Health check (dirty, PRs) |
+| `bearing plan sync` | Sync plans to GitHub issues |
 | `bearing-tui` | Launch the terminal UI |
+
+---
+
+## 🎯 Plan Sync
+
+Keep markdown plans synced with GitHub issues:
+
+```bash
+bearing plan sync --project bearing    # Sync all bearing plans
+bearing plan push plans/myapp/001.md   # Push single plan
+```
+
+Plans live in `~/Projects/plans/<project>/` with frontmatter:
+
+```yaml
+---
+issue: 42
+repo: myapp
+status: active
+---
+# My Plan Title
+```
+
+---
+
+## 🖥️ TUI Keybindings
+
+| Key | Action |
+|-----|--------|
+| `0-2` | Focus panel (projects/worktrees/details) |
+| `j/k` | Navigate up/down |
+| `h/l` | Navigate left/right |
+| `p` | **Browse plans** |
+| `o` | Open PR in browser |
+| `r` | Refresh data |
+| `?` | Show all keybindings |
+| `q` | Quit (saves session) |
+
+Session is persisted across restarts (project, worktree selection, focused panel).
 
 ---
 

@@ -238,3 +238,51 @@ Toast {
     color: $text;
     border: round $accent-blue;
 }
+
+/* Plans modal styling */
+PlansScreen {
+    align: center middle;
+}
+
+#plans-modal {
+    width: 80;
+    height: auto;
+    max-height: 80%;
+    background: $bg-panel;
+    border: round $accent-purple;
+    padding: 1 2;
+}
+
+#plans-header {
+    height: 1;
+    margin-bottom: 1;
+}
+
+PlansList {
+    background: $bg-panel;
+    height: auto;
+    max-height: 20;
+    border: none;
+}
+
+PlanListItem {
+    padding: 0 1;
+    height: 1;
+    background: transparent;
+    color: $text;
+}
+
+PlanListItem:hover {
+    background: $bg-highlight;
+}
+
+PlanListItem.-highlight {
+    background: $bg-selection;
+    color: $text-bright;
+}
+
+PlansList:focus PlanListItem.-highlight {
+    background: #2d5a8a;
+    color: $text-bright;
+    text-style: bold;
+}

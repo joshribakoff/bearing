@@ -1,7 +1,9 @@
 """Bearing TUI application."""
+import json
 import os
 import subprocess
 import webbrowser
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from textual.app import App, ComposeResult
@@ -19,6 +21,8 @@ from bearing_tui.widgets import (
     DetailsPanel,
     LocalEntry,
     WorkflowEntry,
+    PlansList,
+    load_plans,
 )
 
 
@@ -52,12 +56,60 @@ class HelpScreen(ModalScreen):
                 "  [yellow]R[/]      Force refresh (daemon)\n"
                 "  [yellow]d[/]      Daemon health check\n"
                 "  [yellow]o[/]      Open PR in browser\n"
+                "  [yellow]p[/]      View plans\n"
                 "  [yellow]?[/]      Show this help\n"
                 "  [yellow]q[/]      Quit\n",
                 id="help-content",
             ),
             id="help-modal",
         )
+
+
+class PlansScreen(ModalScreen):
+    """Modal screen showing plans list."""
+
+    BINDINGS = [
+        Binding("escape", "dismiss", "Close"),
+        Binding("q", "dismiss", "Close"),
+        Binding("p", "dismiss", "Close"),
+        Binding("j", "cursor_down", "Down", show=False),
+        Binding("k", "cursor_up", "Up", show=False),
+        Binding("o", "open_issue", "Open Issue", show=False),
+    ]
+
+    def __init__(self, workspace: Path) -> None:
+        super().__init__()
+        self.workspace = workspace
+
+    def compose(self) -> ComposeResult:
+        yield Container(
+            Static("[b cyan]Plans[/] [dim](press o to open issue, Esc to close)[/]", id="plans-header"),
+            PlansList(id="plans-list"),
+            id="plans-modal",
+        )
+
+    def on_mount(self) -> None:
+        plans = load_plans(self.workspace)
+        plans_list = self.query_one("#plans-list", PlansList)
+        plans_list.set_plans(plans)
+        plans_list.focus()
+
+    def action_cursor_down(self) -> None:
+        self.query_one(PlansList).action_cursor_down()
+
+    def action_cursor_up(self) -> None:
+        self.query_one(PlansList).action_cursor_up()
+
+    def action_open_issue(self) -> None:
+        """Open the selected plan's issue in browser."""
+        plans_list = self.query_one(PlansList)
+        if plans_list.index is not None and plans_list.index < len(plans_list._plans):
+            plan = plans_list._plans[plans_list.index]
+            if plan.issue:
+                # Get repo from the plan's project name
+                url = f"https://github.com/joshribakoff/{plan.project}/issues/{plan.issue}"
+                webbrowser.open(url)
+                self.app.notify(f"Opened issue #{plan.issue}", timeout=2)
 
 
 class BearingApp(App):
@@ -76,6 +128,7 @@ class BearingApp(App):
         Binding("R", "force_refresh", "Force Refresh", show=False),
         Binding("d", "daemon", "Daemon"),
         Binding("o", "open_pr", "Open PR", show=False),
+        Binding("p", "show_plans", "Plans"),
         # Panel navigation by number (0-indexed)
         Binding("0", "focus_panel_0", "Projects", show=False),
         Binding("1", "focus_panel_1", "Worktrees", show=False),
@@ -126,20 +179,120 @@ class BearingApp(App):
             "[yellow]c[/]leanup  "
             "[yellow]r[/]efresh  "
             "[yellow]o[/]pen PR  "
+            "[yellow]p[/]lans  "
             "[yellow]?[/] help  "
             "[yellow]q[/]uit",
             id="footer-bar"
         )
 
+    @property
+    def _session_file(self) -> Path:
+        """Path to session state file."""
+        bearing_dir = Path.home() / ".bearing"
+        bearing_dir.mkdir(exist_ok=True)
+        return bearing_dir / "tui-session.json"
+
+    def _save_session(self) -> None:
+        """Save full UI state to session file."""
+        try:
+            # Get focused panel
+            focused = self.focused
+            focused_panel = focused.id if focused and focused.id in self._panel_order else None
+
+            # Get worktree table cursor position
+            worktree_table = self.query_one(WorktreeTable)
+            worktree_cursor = worktree_table.cursor_row if worktree_table.row_count > 0 else None
+
+            # Get project list index
+            project_list = self.query_one(ProjectList)
+            project_index = project_list.index
+
+            session = {
+                "selected_project": self._current_project,
+                "project_index": project_index,
+                "worktree_cursor": worktree_cursor,
+                "focused_panel": focused_panel,
+                "timestamp": datetime.now().isoformat(),
+            }
+            self._session_file.write_text(json.dumps(session, indent=2))
+        except Exception:
+            pass  # Don't fail on session save errors
+
+    def _restore_session(self) -> bool:
+        """Restore full UI state from session file if recent. Returns True if restored."""
+        try:
+            if not self._session_file.exists():
+                return False
+            session = json.loads(self._session_file.read_text())
+            timestamp = datetime.fromisoformat(session.get("timestamp", ""))
+            # Only restore if < 24 hours old
+            if datetime.now() - timestamp > timedelta(hours=24):
+                return False
+
+            # Restore project selection
+            project = session.get("selected_project")
+            if project:
+                self._select_project(project)
+
+            # Restore worktree cursor
+            worktree_cursor = session.get("worktree_cursor")
+            if worktree_cursor is not None:
+                worktree_table = self.query_one(WorktreeTable)
+                if worktree_table.row_count > worktree_cursor:
+                    worktree_table.cursor_coordinate = (worktree_cursor, 0)
+                    # Trigger details update for selected worktree
+                    self._update_details_for_cursor(worktree_cursor)
+
+            # Restore focused panel
+            focused_panel = session.get("focused_panel")
+            if focused_panel:
+                self.query_one(f"#{focused_panel}").focus()
+                return True
+            return False
+        except Exception:
+            return False  # Don't fail on session restore errors
+
+    def _update_details_for_cursor(self, cursor_row: int) -> None:
+        """Update details panel for worktree at cursor position."""
+        from textual.coordinate import Coordinate
+        worktree_table = self.query_one(WorktreeTable)
+        try:
+            cell_key = worktree_table.coordinate_to_cell_key(Coordinate(cursor_row, 0))
+            folder = str(cell_key.row_key.value)
+            if folder and folder != "empty":
+                self._update_details(folder)
+        except Exception:
+            pass
+
+    def _select_project(self, project: str) -> None:
+        """Select a project by name."""
+        project_list = self.query_one("#project-list", ProjectList)
+        for i, item in enumerate(project_list.children):
+            if hasattr(item, "project") and item.project == project:
+                project_list.index = i
+                self._current_project = project
+                self._update_worktree_table(project)
+                break
+
     def on_mount(self) -> None:
         """Load data when app mounts."""
         self.action_refresh()
-        # Focus the project list initially
-        self.query_one("#project-list", ProjectList).focus()
+        # Restore session (includes focus) or default to project list
+        if not self._restore_session():
+            self.query_one("#project-list", ProjectList).focus()
 
     def action_show_help(self) -> None:
         """Show the help modal."""
         self.push_screen(HelpScreen())
+
+    def action_quit(self) -> None:
+        """Save session and quit."""
+        self._save_session()
+        self.exit()
+
+    def action_show_plans(self) -> None:
+        """Show the plans modal."""
+        self.push_screen(PlansScreen(self.workspace))
 
     def action_refresh(self) -> None:
         """Refresh data from files."""
