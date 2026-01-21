@@ -79,16 +79,16 @@ async def test_keyboard_navigation(workspace):
     """Test 0-indexed panel keyboard navigation."""
     app = BearingApp(workspace=workspace)
     async with app.run_test() as pilot:
-        # Initial focus auto-advances to worktree table when project selected
-        assert isinstance(app.focused, WorktreeTable)
-
-        # Press 0 to focus project list
-        await pilot.press("0")
+        # Fresh start (no session) focuses project list
         assert isinstance(app.focused, ProjectList)
 
         # Press 1 to focus worktree table
         await pilot.press("1")
         assert isinstance(app.focused, WorktreeTable)
+
+        # Press 0 to focus project list
+        await pilot.press("0")
+        assert isinstance(app.focused, ProjectList)
 
         # Press 2 to focus details panel
         await pilot.press("2")
@@ -129,20 +129,20 @@ async def test_tab_navigation(workspace):
     """Test Tab key cycles through panels."""
     app = BearingApp(workspace=workspace)
     async with app.run_test() as pilot:
-        # Initial focus auto-advances to worktree table when project selected
+        # Fresh start (no session) focuses project list
+        assert app.focused.id == "project-list"
+
+        # Tab to worktree table
+        await pilot.press("tab")
         assert app.focused.id == "worktree-table"
 
         # Tab to details panel
         await pilot.press("tab")
         assert app.focused.id == "details-panel"
 
-        # Tab wraps to project list
+        # Tab wraps back to project list
         await pilot.press("tab")
         assert app.focused.id == "project-list"
-
-        # Tab back to worktree table
-        await pilot.press("tab")
-        assert app.focused.id == "worktree-table"
 
 
 @pytest.mark.asyncio

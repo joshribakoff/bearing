@@ -178,10 +178,10 @@ class BearingApp(App):
 
     @property
     def _session_file(self) -> Path:
-        """Path to session state file."""
-        bearing_dir = Path.home() / ".bearing"
-        bearing_dir.mkdir(exist_ok=True)
-        return bearing_dir / "tui-session.json"
+        """Path to session state file (workspace-relative for test isolation)."""
+        session_dir = self.workspace / ".bearing"
+        session_dir.mkdir(exist_ok=True)
+        return session_dir / "tui-session.json"
 
     def _save_session(self) -> None:
         """Save full UI state to session file."""
