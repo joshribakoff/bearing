@@ -174,18 +174,7 @@ class BearingApp(App):
                 yield WorktreeTable(id="worktree-table")
         yield Label("[2] Details", classes="panel-header details-header")
         yield DetailsPanel(id="details-panel")
-        yield Static(
-            "[yellow]0[/]-[yellow]2[/] panels  "
-            "[yellow]j/k[/] nav  "
-            "[yellow]n[/]ew  "
-            "[yellow]c[/]leanup  "
-            "[yellow]r[/]efresh  "
-            "[yellow]o[/]pen PR  "
-            "[yellow]p[/]lans  "
-            "[yellow]?[/] help  "
-            "[yellow]q[/]uit",
-            id="footer-bar"
-        )
+        yield Footer()
 
     @property
     def _session_file(self) -> Path:
