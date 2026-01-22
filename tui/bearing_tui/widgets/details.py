@@ -100,9 +100,8 @@ class DetailsPanel(Static, can_focus=True):
             if health_entry.pr_state:
                 pr_style = {
                     "open": "bold green",
-                    "merged": "dim cyan",
-                    "closed": "dim red",
-                    "draft": "dim",  # Gray like GitHub
+                    "merged": "bold magenta",
+                    "closed": "bold red"
                 }.get(health_entry.pr_state.lower(), "white")
                 parts.append(Text(f"PR: {health_entry.pr_state.upper()}", style=pr_style))
             if parts:

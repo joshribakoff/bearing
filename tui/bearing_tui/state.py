@@ -52,7 +52,6 @@ class HealthEntry:
     dirty: bool
     unpushed: int
     pr_state: Optional[str]
-    pr_title: Optional[str]
     last_check: Optional[datetime]
 
 
@@ -121,7 +120,6 @@ class BearingState:
                 dirty=e.get("dirty", False),
                 unpushed=e.get("unpushed", 0),
                 pr_state=e.get("prState"),
-                pr_title=e.get("prTitle"),
                 last_check=_parse_datetime(e.get("lastCheck")),
             )
             for e in entries

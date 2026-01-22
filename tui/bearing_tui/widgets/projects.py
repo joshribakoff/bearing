@@ -8,6 +8,19 @@ from rich.text import Text
 class ProjectListItem(ListItem):
     """ListItem that stores the original project name and count."""
 
+    DEFAULT_CSS = """
+    ProjectListItem {
+        height: 1;
+        padding: 0 1;
+    }
+    ProjectListItem.--highlight {
+        background: #264f78;
+    }
+    ProjectListItem:focus.--highlight {
+        background: #2d5a8a;
+    }
+    """
+
     def __init__(self, project: str, count: int = 0, **kwargs) -> None:
         super().__init__(**kwargs)
         self.project = project
@@ -23,6 +36,24 @@ class ProjectListItem(ListItem):
 
 class ProjectList(ListView):
     """Left panel showing list of repos/projects."""
+
+    DEFAULT_CSS = """
+    ProjectList {
+        background: #252526;
+    }
+    ProjectList > ProjectListItem.--highlight {
+        background: #264f78;
+    }
+    ProjectList:focus > ProjectListItem.--highlight {
+        background: #2d5a8a;
+    }
+    ProjectList > ListItem.--highlight {
+        background: #264f78;
+    }
+    ProjectList:focus > ListItem.--highlight {
+        background: #2d5a8a;
+    }
+    """
 
     class ProjectSelected(Message):
         """Emitted when a project is selected."""
@@ -44,23 +75,14 @@ class ProjectList(ListView):
         if isinstance(event.item, ProjectListItem):
             self.post_message(self.ProjectSelected(event.item.project))
 
-    def set_projects(self, projects: list[str], counts: dict[str, int] | None = None, preserve_selection: str | None = None) -> None:
-        """Update the project list with optional worktree counts.
-
-        Args:
-            projects: List of project names
-            counts: Optional dict of project -> worktree count
-            preserve_selection: Project name to re-select after update
-        """
+    def set_projects(self, projects: list[str], counts: dict[str, int] | None = None) -> None:
+        """Update the project list with optional worktree counts."""
         self.projects = projects
         self._counts = counts or {}
         self.clear()
         if not projects:
             self.append(ListItem(Static("No projects found")))
         else:
-            for i, project in enumerate(projects):
+            for project in projects:
                 count = self._counts.get(project, 0)
                 self.append(ProjectListItem(project, count))
-                # Restore selection if this is the preserved project
-                if preserve_selection and project == preserve_selection:
-                    self.index = i

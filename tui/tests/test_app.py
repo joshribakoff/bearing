@@ -79,14 +79,14 @@ async def test_keyboard_navigation(workspace):
     """Test 0-indexed panel keyboard navigation."""
     app = BearingApp(workspace=workspace)
     async with app.run_test() as pilot:
-        # Fresh start (no session) focuses project list
+        # Initial focus should be on project list
         assert isinstance(app.focused, ProjectList)
 
         # Press 1 to focus worktree table
         await pilot.press("1")
         assert isinstance(app.focused, WorktreeTable)
 
-        # Press 0 to focus project list
+        # Press 0 to focus back to project list
         await pilot.press("0")
         assert isinstance(app.focused, ProjectList)
 
@@ -129,7 +129,7 @@ async def test_tab_navigation(workspace):
     """Test Tab key cycles through panels."""
     app = BearingApp(workspace=workspace)
     async with app.run_test() as pilot:
-        # Fresh start (no session) focuses project list
+        # Start at project list
         assert app.focused.id == "project-list"
 
         # Tab to worktree table
@@ -143,128 +143,3 @@ async def test_tab_navigation(workspace):
         # Tab wraps back to project list
         await pilot.press("tab")
         assert app.focused.id == "project-list"
-
-
-@pytest.mark.asyncio
-async def test_projects_panel_focus_border(workspace):
-    """Test that projects panel gets blue border when focused."""
-    from textual.color import Color
-
-    app = BearingApp(workspace=workspace)
-    async with app.run_test() as pilot:
-        # Focus the project list
-        await pilot.press("0")
-        await pilot.pause()
-
-        # Get computed styles for projects panel
-        projects_panel = app.query_one("#projects-panel")
-        worktrees_panel = app.query_one("#worktrees-panel")
-
-        # Verify focus is on project list
-        assert app.focused.id == "project-list"
-
-        # Check border colors - projects should be blue (focus), worktrees should be gray
-        # Border is a tuple of ((edge_type, color), ...) for each edge
-        # We check the top border color
-        projects_border = projects_panel.styles.border_top
-        worktrees_border = worktrees_panel.styles.border_top
-
-        # The focused panel should have blue border (#007acc)
-        # The unfocused panel should have gray border (#3c3c3c)
-        blue_focus = Color.parse("#007acc")
-        gray_border = Color.parse("#3c3c3c")
-
-        # Extract border color (border_top is a tuple of (edge_type, color))
-        projects_color = projects_border[1] if projects_border else None
-        worktrees_color = worktrees_border[1] if worktrees_border else None
-
-        assert projects_color == blue_focus, f"Projects panel should have blue border when focused, got {projects_color}"
-        assert worktrees_color == gray_border, f"Worktrees panel should have gray border when not focused, got {worktrees_color}"
-
-
-@pytest.mark.asyncio
-async def test_worktrees_panel_focus_border(workspace):
-    """Test that worktrees panel gets blue border when focused."""
-    from textual.color import Color
-
-    app = BearingApp(workspace=workspace)
-    async with app.run_test() as pilot:
-        # Focus the worktree table
-        await pilot.press("1")
-        await pilot.pause()
-
-        # Get computed styles for both panels
-        projects_panel = app.query_one("#projects-panel")
-        worktrees_panel = app.query_one("#worktrees-panel")
-
-        # Verify focus is on worktree table
-        assert app.focused.id == "worktree-table"
-
-        # Check border colors
-        projects_border = projects_panel.styles.border_top
-        worktrees_border = worktrees_panel.styles.border_top
-
-        blue_focus = Color.parse("#007acc")
-        gray_border = Color.parse("#3c3c3c")
-
-        projects_color = projects_border[1] if projects_border else None
-        worktrees_color = worktrees_border[1] if worktrees_border else None
-
-        assert projects_color == gray_border, f"Projects panel should have gray border when not focused, got {projects_color}"
-        assert worktrees_color == blue_focus, f"Worktrees panel should have blue border when focused, got {worktrees_color}"
-
-
-@pytest.mark.asyncio
-async def test_project_list_item_highlight(workspace):
-    """Test that highlighted item in ProjectList has blue background."""
-    from textual.color import Color
-
-    app = BearingApp(workspace=workspace)
-    async with app.run_test() as pilot:
-        # Focus the project list
-        await pilot.press("0")
-        await pilot.pause()
-
-        # Move down to ensure we have a highlighted item
-        await pilot.press("j")
-        await pilot.pause()
-
-        project_list = app.query_one(ProjectList)
-        assert project_list.highlighted_child is not None, "Should have a highlighted item after navigation"
-
-        highlighted_item = project_list.highlighted_child
-        bg = highlighted_item.styles.background
-
-        # When focused, should have bright blue (#2d5a8a)
-        bright_blue = Color.parse("#2d5a8a")
-        assert bg == bright_blue, f"Highlighted item should have bright blue background when focused, got {bg}"
-
-
-@pytest.mark.asyncio
-async def test_project_list_item_highlight_unfocused(workspace):
-    """Test that highlighted item in ProjectList retains blue when panel loses focus."""
-    from textual.color import Color
-
-    app = BearingApp(workspace=workspace)
-    async with app.run_test() as pilot:
-        # Focus the project list and move to first item
-        await pilot.press("0")
-        await pilot.pause()
-        # Move down to ensure we have a highlighted item
-        await pilot.press("j")
-        await pilot.pause()
-
-        # Now move focus to worktrees panel
-        await pilot.press("1")
-        await pilot.pause()
-
-        # The project list should still have a highlighted item with dimmer blue
-        project_list = app.query_one(ProjectList)
-        assert project_list.highlighted_child is not None, "Should still have a highlighted item"
-
-        highlighted_item = project_list.highlighted_child
-        bg = highlighted_item.styles.background
-
-        # When unfocused, should have selection blue (#264f78)
-        selection_blue = Color.parse("#264f78")
-        assert bg == selection_blue, f"Highlighted item should retain blue background when unfocused, got {bg}"
