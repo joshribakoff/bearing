@@ -48,3 +48,10 @@ type ActivityEvent struct {
 	Commit    string    `json:"commit,omitempty"`
 	Message   string    `json:"message,omitempty"`
 }
+
+// ClaudeSessionEntry tracks Claude Code sessions per worktree
+type ClaudeSessionEntry struct {
+	Folder    string    `json:"folder"`
+	SessionID string    `json:"session_id"`
+	LastUsed  time.Time `json:"last_used"`
+}
