@@ -33,24 +33,33 @@ issue=$(get_frontmatter "$FILE" "github_issue")
 labels=$(get_frontmatter "$FILE" "labels" | tr -d '[]' | tr ',' ' ' | xargs | tr ' ' ',')
 [ -z "$labels" ] && labels="plan"
 
+# Auto-infer title from first markdown heading if missing
 if [ -z "$title" ]; then
-    echo "Error: Missing 'title' in frontmatter"
-    exit 1
+    title=$(grep -m 1 '^# ' "$FILE" | sed 's/^# //')
+    if [ -n "$title" ]; then
+        echo "Auto-detected title: $title"
+        set_frontmatter "$FILE" "title" "$title"
+    else
+        echo "Error: Missing 'title' in frontmatter and no markdown heading found"
+        exit 1
+    fi
 fi
 
+# Auto-infer github_repo from path: plans/<project>/xxx.md
 if [ -z "$repo" ]; then
-    # Try to infer from path: plans/<project>/xxx.md
     project=$(echo "$FILE" | sed -n 's|.*plans/\([^/]*\)/.*|\1|p')
     if [ -n "$project" ]; then
-        # Check if we can find the repo
+        # Check if we can find the repo (case-insensitive match)
         repo=$(gh repo list --json nameWithOwner --limit 100 -q ".[].nameWithOwner" 2>/dev/null | grep -i "/$project$" | head -1)
     fi
 
-    if [ -z "$repo" ]; then
+    if [ -n "$repo" ]; then
+        echo "Auto-detected repo: $repo"
+        set_frontmatter "$FILE" "github_repo" "$repo"
+    else
         echo "Error: Missing 'github_repo' in frontmatter and couldn't infer"
         exit 1
     fi
-    echo "Inferred repo: $repo"
 fi
 
 # Load adapter

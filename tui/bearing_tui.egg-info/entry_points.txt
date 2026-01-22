@@ -1,2 +1,0 @@
-[console_scripts]
-bearing-tui = bearing_tui.__main__:main

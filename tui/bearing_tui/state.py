@@ -150,6 +150,44 @@ class BearingState:
                 return entry
         return None
 
+    def get_plans_for_project(self, project: str) -> list[dict]:
+        """Get plans for a specific project from plans directory."""
+        from .widgets.plans import parse_plan_frontmatter
+        plans_dir = self.workspace_dir / "plans" / project
+        if not plans_dir.exists():
+            return []
+
+        plans = []
+        for plan_file in plans_dir.glob("*.md"):
+            try:
+                fm = parse_plan_frontmatter(plan_file)
+                plans.append({
+                    "file_path": plan_file,
+                    "project": project,
+                    "title": fm.get("title", plan_file.stem),
+                    "issue": fm.get("issue"),
+                    "status": fm.get("status", "draft"),
+                    "pr": fm.get("pr"),
+                })
+            except Exception:
+                continue
+
+        # Sort by status (active first), then title
+        status_order = {"active": 0, "in_progress": 1, "draft": 2, "completed": 3}
+        plans.sort(key=lambda p: (status_order.get(p["status"], 4), p["title"]))
+        return plans
+
+    def get_plan_projects(self) -> list[str]:
+        """Get unique project names that have plans."""
+        plans_dir = self.workspace_dir / "plans"
+        if not plans_dir.exists():
+            return []
+        projects = []
+        for project_dir in plans_dir.iterdir():
+            if project_dir.is_dir() and list(project_dir.glob("*.md")):
+                projects.append(project_dir.name)
+        return sorted(projects)
+
 
 if __name__ == "__main__":
     # Test by reading actual files

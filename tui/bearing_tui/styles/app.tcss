@@ -61,15 +61,15 @@ Screen {
     border: round $border-focus;
 }
 
-/* Right panel - Worktrees */
-#worktrees-panel {
+/* Right panel - Main (Worktrees or Plans) */
+#main-panel {
     width: 1fr;
     background: $bg-panel;
     border: round $border;
     margin: 0 1 0 1;
 }
 
-#worktrees-panel:focus-within {
+#main-panel:focus-within {
     border: round $border-focus;
 }
 
@@ -175,6 +175,55 @@ WorktreeTable:focus > .datatable--even-row {
 }
 
 WorktreeTable:focus > .datatable--odd-row {
+    background: $bg-surface;
+}
+
+/* Plans table styling */
+PlansTable {
+    background: $bg-panel;
+    scrollbar-background: $bg-surface;
+    scrollbar-color: $border;
+    scrollbar-color-hover: $text-dim;
+    border: none;
+}
+
+PlansTable > .datatable--header {
+    background: $bg-surface;
+    color: $accent-purple;
+    text-style: bold;
+}
+
+/* Cursor when table has focus - bright selection */
+PlansTable:focus > .datatable--cursor {
+    background: #2d5a8a;
+    color: $text-bright;
+    text-style: bold;
+}
+
+/* Cursor when table doesn't have focus - dimmer but visible */
+PlansTable > .datatable--cursor {
+    background: $bg-selection;
+    color: $text;
+}
+
+PlansTable > .datatable--header-cursor {
+    background: $bg-surface;
+    color: $accent-purple;
+}
+
+PlansTable > .datatable--even-row {
+    background: $bg-panel;
+}
+
+PlansTable > .datatable--odd-row {
+    background: $bg-surface;
+}
+
+PlansTable:focus > .datatable--even-row {
+    background: $bg-panel;
+}
+
+PlansTable:focus > .datatable--odd-row {
     background: $bg-surface;
 }
 

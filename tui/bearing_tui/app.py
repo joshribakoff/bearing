@@ -4,6 +4,7 @@ import os
 import subprocess
 import webbrowser
 from datetime import datetime, timedelta
+from enum import Enum
 from pathlib import Path
 
 from textual.app import App, ComposeResult
@@ -22,8 +23,16 @@ from bearing_tui.widgets import (
     LocalEntry,
     WorkflowEntry,
     PlansList,
+    PlansTable,
+    PlanEntry,
     load_plans,
 )
+
+
+class ViewMode(Enum):
+    """Current view mode."""
+    WORKTREES = "worktrees"
+    PLANS = "plans"
 
 
 class HelpScreen(ModalScreen):
@@ -31,7 +40,8 @@ class HelpScreen(ModalScreen):
 
     BINDINGS = [
         Binding("escape", "dismiss", "Close"),
-        Binding("q", "dismiss", "Close"),
+        Binding("q", "app.quit", "Quit"),
+        Binding("ctrl+c", "app.quit", "Quit", show=False),
         Binding("question_mark", "dismiss", "Close"),
     ]
 
@@ -39,9 +49,12 @@ class HelpScreen(ModalScreen):
         yield Container(
             Static(
                 "[b cyan]Bearing TUI - Keybindings[/]\n\n"
+                "[b]Views[/]\n"
+                "  [yellow]w[/]      Switch to worktrees view\n"
+                "  [yellow]p[/]      Switch to plans view\n\n"
                 "[b]Navigation[/]\n"
                 "  [yellow]0[/]      Focus projects panel\n"
-                "  [yellow]1[/]      Focus worktrees panel\n"
+                "  [yellow]1[/]      Focus main panel\n"
                 "  [yellow]2[/]      Focus details panel\n"
                 "  [yellow]h / \u2190[/]  Focus left panel\n"
                 "  [yellow]l / \u2192[/]  Focus right panel\n"
@@ -55,8 +68,7 @@ class HelpScreen(ModalScreen):
                 "  [yellow]r[/]      Refresh data\n"
                 "  [yellow]R[/]      Force refresh (daemon)\n"
                 "  [yellow]d[/]      Daemon health check\n"
-                "  [yellow]o[/]      Open PR in browser\n"
-                "  [yellow]p[/]      View plans\n"
+                "  [yellow]o[/]      Open PR/Issue in browser\n"
                 "  [yellow]?[/]      Show this help\n"
                 "  [yellow]q[/]      Quit\n",
                 id="help-content",
@@ -70,7 +82,8 @@ class PlansScreen(ModalScreen):
 
     BINDINGS = [
         Binding("escape", "dismiss", "Close"),
-        Binding("q", "dismiss", "Close"),
+        Binding("q", "app.quit", "Quit"),
+        Binding("ctrl+c", "app.quit", "Quit", show=False),
         Binding("p", "dismiss", "Close"),
         Binding("j", "cursor_down", "Down", show=False),
         Binding("k", "cursor_up", "Up", show=False),
@@ -127,11 +140,13 @@ class BearingApp(App):
         Binding("r", "refresh", "Refresh"),
         Binding("R", "force_refresh", "Force Refresh", show=False),
         Binding("d", "daemon", "Daemon"),
-        Binding("o", "open_pr", "Open PR", show=False),
-        Binding("p", "show_plans", "Plans"),
+        Binding("o", "open_item", "Open", show=False),
+        # View switching
+        Binding("w", "switch_to_worktrees", "Worktrees", show=False),
+        Binding("p", "switch_to_plans", "Plans", show=False),
         # Panel navigation by number (0-indexed)
         Binding("0", "focus_panel_0", "Projects", show=False),
-        Binding("1", "focus_panel_1", "Worktrees", show=False),
+        Binding("1", "focus_panel_1", "Main", show=False),
         Binding("2", "focus_panel_2", "Details", show=False),
         # Vim-style navigation
         Binding("j", "cursor_down", "Down", show=False),
@@ -158,6 +173,7 @@ class BearingApp(App):
         self.workspace = workspace
         self.state = BearingState(workspace)
         self._current_project: str | None = None
+        self._view_mode = ViewMode.WORKTREES
         self._panel_order = ["project-list", "worktree-table", "details-panel"]
 
     def compose(self) -> ComposeResult:
@@ -167,23 +183,97 @@ class BearingApp(App):
             with Vertical(id="projects-panel"):
                 yield Label("[0] Projects [dev-check]", classes="panel-header")
                 yield ProjectList(id="project-list")
-            with Vertical(id="worktrees-panel"):
-                yield Label("[1] Worktrees [dev-check]", classes="panel-header")
+            with Vertical(id="main-panel"):
+                yield Label("[1] Worktrees [dev-check]", classes="panel-header", id="main-panel-header")
                 yield WorktreeTable(id="worktree-table")
+                yield PlansTable(id="plans-table")
         yield Label("[2] Details", classes="panel-header details-header")
         yield DetailsPanel(id="details-panel")
-        yield Static(
-            "[yellow]0[/]-[yellow]2[/] panels  "
+        yield Static(self._get_footer_text(), id="footer-bar")
+
+    def _get_footer_text(self) -> str:
+        """Get footer text with current mode highlighted."""
+        if self._view_mode == ViewMode.WORKTREES:
+            mode_text = "[bold cyan][w]orktrees[/] [dim][p]lans[/]"
+        else:
+            mode_text = "[dim][w]orktrees[/] [bold cyan][p]lans[/]"
+        return (
+            f"{mode_text}  "
             "[yellow]j/k[/] nav  "
-            "[yellow]n[/]ew  "
-            "[yellow]c[/]leanup  "
+            "[yellow]o[/]pen  "
             "[yellow]r[/]efresh  "
-            "[yellow]o[/]pen PR  "
-            "[yellow]p[/]lans  "
             "[yellow]?[/] help  "
-            "[yellow]q[/]uit",
-            id="footer-bar"
+            "[yellow]q[/]uit"
         )
+
+    def _update_footer(self) -> None:
+        """Update footer with current mode."""
+        footer = self.query_one("#footer-bar", Static)
+        footer.update(self._get_footer_text())
+
+    def _update_view(self) -> None:
+        """Update UI for current view mode."""
+        worktree_table = self.query_one("#worktree-table", WorktreeTable)
+        plans_table = self.query_one("#plans-table", PlansTable)
+        header = self.query_one("#main-panel-header", Label)
+
+        if self._view_mode == ViewMode.WORKTREES:
+            worktree_table.display = True
+            plans_table.display = False
+            header.update("[1] Worktrees")
+            self._panel_order = ["project-list", "worktree-table", "details-panel"]
+        else:
+            worktree_table.display = False
+            plans_table.display = True
+            header.update("[1] Plans")
+            self._panel_order = ["project-list", "plans-table", "details-panel"]
+
+        self._update_footer()
+
+        # Update project list for current view
+        if self._view_mode == ViewMode.WORKTREES:
+            self._refresh_worktrees_view()
+        else:
+            self._refresh_plans_view()
+
+    def _refresh_worktrees_view(self) -> None:
+        """Refresh project list with worktree counts."""
+        projects = self.state.get_projects()
+        local_entries = self.state.read_local()
+        counts: dict[str, int] = {}
+        for entry in local_entries:
+            counts[entry.repo] = counts.get(entry.repo, 0) + 1
+        project_list = self.query_one(ProjectList)
+        project_list.set_projects(projects, counts)
+
+    def _refresh_plans_view(self) -> None:
+        """Refresh project list with plan counts."""
+        # Get projects that have plans
+        plan_projects = self.state.get_plan_projects()
+        counts: dict[str, int] = {}
+        for project in plan_projects:
+            plans = self.state.get_plans_for_project(project)
+            counts[project] = len(plans)
+        project_list = self.query_one(ProjectList)
+        project_list.set_projects(plan_projects, counts)
+
+    def action_switch_to_worktrees(self) -> None:
+        """Switch to worktrees view."""
+        if self._view_mode != ViewMode.WORKTREES:
+            self._view_mode = ViewMode.WORKTREES
+            self._current_project = None
+            self._update_view()
+            self.query_one(WorktreeTable).clear_worktrees()
+            self.query_one(DetailsPanel).clear()
+
+    def action_switch_to_plans(self) -> None:
+        """Switch to plans view."""
+        if self._view_mode != ViewMode.PLANS:
+            self._view_mode = ViewMode.PLANS
+            self._current_project = None
+            self._update_view()
+            self.query_one(PlansTable).clear_plans()
+            self.query_one(DetailsPanel).clear()
 
     @property
     def _session_file(self) -> Path:
@@ -274,8 +364,31 @@ class BearingApp(App):
                 self._update_worktree_table(project)
                 break
 
+    def _ensure_daemon_running(self) -> None:
+        """Start daemon if not already running."""
+        try:
+            result = subprocess.run(
+                ["bearing", "daemon", "status"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+            if "running" not in result.stdout.lower():
+                # Start daemon in background
+                subprocess.Popen(
+                    ["bearing", "daemon", "start"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            # bearing CLI not found or timeout - skip daemon
+            pass
+
     def on_mount(self) -> None:
         """Load data when app mounts."""
+        self._ensure_daemon_running()
+        # Hide plans table initially (worktrees is default view)
+        self.query_one("#plans-table", PlansTable).display = False
         self.action_refresh()
         # Restore session (includes focus) or default to project list
         if not self._restore_session():
@@ -290,30 +403,17 @@ class BearingApp(App):
         self._save_session()
         self.exit()
 
-    def action_show_plans(self) -> None:
-        """Show the plans modal."""
-        self.push_screen(PlansScreen(self.workspace))
-
     def action_refresh(self) -> None:
-        """Refresh data from files."""
-        projects = self.state.get_projects()
+        """Refresh data for current view."""
+        if self._view_mode == ViewMode.WORKTREES:
+            self._refresh_worktrees_view()
+            self.query_one(WorktreeTable).clear_worktrees()
+        else:
+            self._refresh_plans_view()
+            self.query_one(PlansTable).clear_plans()
 
-        # Count worktrees per project
-        local_entries = self.state.read_local()
-        counts: dict[str, int] = {}
-        for entry in local_entries:
-            counts[entry.repo] = counts.get(entry.repo, 0) + 1
-
-        project_list = self.query_one(ProjectList)
-        project_list.set_projects(projects, counts)
-
-        # Clear worktree table and details
-        worktree_table = self.query_one(WorktreeTable)
-        worktree_table.clear_worktrees()
-        details = self.query_one(DetailsPanel)
-        details.clear()
+        self.query_one(DetailsPanel).clear()
         self._current_project = None
-
         self.notify("Data refreshed", timeout=2)
 
     def action_focus_panel_0(self) -> None:
@@ -321,8 +421,11 @@ class BearingApp(App):
         self.query_one("#project-list", ProjectList).focus()
 
     def action_focus_panel_1(self) -> None:
-        """Focus the worktrees panel."""
-        self.query_one("#worktree-table", WorktreeTable).focus()
+        """Focus the main panel (worktrees or plans)."""
+        if self._view_mode == ViewMode.WORKTREES:
+            self.query_one("#worktree-table", WorktreeTable).focus()
+        else:
+            self.query_one("#plans-table", PlansTable).focus()
 
     def action_focus_panel_2(self) -> None:
         """Focus the details panel."""
@@ -363,7 +466,10 @@ class BearingApp(App):
     def on_project_list_project_selected(self, event: ProjectList.ProjectSelected) -> None:
         """Handle project selection."""
         self._current_project = event.project
-        self._update_worktree_table(event.project)
+        if self._view_mode == ViewMode.WORKTREES:
+            self._update_worktree_table(event.project)
+        else:
+            self._update_plans_table(event.project)
 
     def _update_worktree_table(self, project: str) -> None:
         """Update worktree table for selected project."""
@@ -394,9 +500,30 @@ class BearingApp(App):
         worktree_table = self.query_one(WorktreeTable)
         worktree_table.set_worktrees(wt_entries, health_map)
 
+    def _update_plans_table(self, project: str) -> None:
+        """Update plans table for selected project."""
+        plans_data = self.state.get_plans_for_project(project)
+        plans = [
+            PlanEntry(
+                file_path=p["file_path"],
+                project=p["project"],
+                title=p["title"],
+                issue=p["issue"],
+                status=p["status"],
+                pr=p.get("pr"),
+            )
+            for p in plans_data
+        ]
+        plans_table = self.query_one(PlansTable)
+        plans_table.set_plans(plans)
+
     def on_worktree_table_worktree_selected(self, event: WorktreeTable.WorktreeSelected) -> None:
         """Handle worktree selection."""
         self._update_details(event.folder)
+
+    def on_plans_table_plan_selected(self, event: PlansTable.PlanSelected) -> None:
+        """Handle plan selection."""
+        self._update_plan_details(event.plan)
 
     def _update_details(self, folder: str) -> None:
         """Update details panel for selected worktree."""
@@ -441,12 +568,42 @@ class BearingApp(App):
         details = self.query_one(DetailsPanel)
         details.set_worktree(local_entry, workflow_entry, health_entry)
 
+    def _update_plan_details(self, plan: PlanEntry) -> None:
+        """Update details panel for selected plan."""
+        from rich.text import Text
+        details = self.query_one(DetailsPanel)
+
+        text = Text()
+        text.append("Plan: ", style="bold blue")
+        text.append(f"{plan.title}\n", style="bright_white")
+        text.append("Project: ", style="bold blue")
+        text.append(f"{plan.project}\n", style="bright_white")
+        text.append("Status: ", style="bold blue")
+        status_style = {
+            "active": "bold green",
+            "in_progress": "bold yellow",
+            "draft": "dim",
+            "completed": "bold cyan",
+        }.get(plan.status, "white")
+        text.append(f"{plan.status}", style=status_style)
+        if plan.issue:
+            text.append("  ")
+            text.append(f"Issue: #{plan.issue}", style="bold cyan")
+        if plan.pr:
+            text.append("  ")
+            text.append(f"PR: {plan.pr}", style="bold green")
+        text.append("\n")
+        text.append("File: ", style="bold blue")
+        text.append(str(plan.file_path), style="dim")
+
+        details.update(text)
+
     def action_cursor_down(self) -> None:
         """Move cursor down in focused widget."""
         focused = self.focused
         if isinstance(focused, ProjectList):
             focused.action_cursor_down()
-        elif isinstance(focused, WorktreeTable):
+        elif isinstance(focused, (WorktreeTable, PlansTable)):
             focused.action_cursor_down()
 
     def action_cursor_up(self) -> None:
@@ -454,7 +611,7 @@ class BearingApp(App):
         focused = self.focused
         if isinstance(focused, ProjectList):
             focused.action_cursor_up()
-        elif isinstance(focused, WorktreeTable):
+        elif isinstance(focused, (WorktreeTable, PlansTable)):
             focused.action_cursor_up()
 
     def action_focus_left(self) -> None:
@@ -462,8 +619,11 @@ class BearingApp(App):
         self.query_one(ProjectList).focus()
 
     def action_focus_right(self) -> None:
-        """Focus the worktree table."""
-        self.query_one(WorktreeTable).focus()
+        """Focus the main table (worktrees or plans)."""
+        if self._view_mode == ViewMode.WORKTREES:
+            self.query_one(WorktreeTable).focus()
+        else:
+            self.query_one(PlansTable).focus()
 
     def action_new_worktree(self) -> None:
         """Create a new worktree (placeholder)."""
@@ -513,7 +673,14 @@ class BearingApp(App):
         except subprocess.TimeoutExpired:
             self.notify("Force refresh timed out", timeout=2)
 
-    def action_open_pr(self) -> None:
+    def action_open_item(self) -> None:
+        """Open the selected item (PR for worktrees, issue for plans)."""
+        if self._view_mode == ViewMode.WORKTREES:
+            self._open_worktree_pr()
+        else:
+            self._open_plan_issue()
+
+    def _open_worktree_pr(self) -> None:
         """Open PR in browser for selected worktree."""
         from textual.coordinate import Coordinate
 
@@ -566,7 +733,7 @@ class BearingApp(App):
             if result.returncode == 0 and result.stdout.strip():
                 url = result.stdout.strip()
                 webbrowser.open(url)
-                self.notify(f"Opened PR", timeout=2)
+                self.notify("Opened PR", timeout=2)
             else:
                 self.notify("Could not get PR URL", timeout=2)
         except FileNotFoundError:
@@ -575,6 +742,23 @@ class BearingApp(App):
             self.notify("PR lookup timed out", timeout=2)
         except Exception as e:
             self.notify(f"Error: {e}", timeout=2)
+
+    def _open_plan_issue(self) -> None:
+        """Open GitHub issue for selected plan."""
+        plans_table = self.query_one(PlansTable)
+        plan = plans_table.get_selected_plan()
+        if not plan:
+            self.notify("No plan selected", timeout=2)
+            return
+
+        if not plan.issue:
+            self.notify("No issue linked to this plan", timeout=2)
+            return
+
+        # Construct issue URL
+        url = f"https://github.com/joshribakoff/{plan.project}/issues/{plan.issue}"
+        webbrowser.open(url)
+        self.notify(f"Opened issue #{plan.issue}", timeout=2)
 
 
 def _create_mock_workspace():
