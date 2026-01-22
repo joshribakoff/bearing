@@ -1,0 +1,18 @@
+---
+import { getCollection } from 'astro:content';
+import DocsLayout from '../../layouts/DocsLayout.astro';
+
+// Get the index entry
+const docs = await getCollection('docs');
+const entry = docs.find(doc => doc.slug === 'index');
+
+if (!entry) {
+  throw new Error('Index doc not found');
+}
+
+const { Content } = await entry.render();
+---
+
+<DocsLayout title={entry.data.title} slug="index">
+  <Content />
+</DocsLayout>

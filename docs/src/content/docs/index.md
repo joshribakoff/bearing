@@ -1,6 +1,6 @@
 ---
 title: Introduction
-description: Worktree-based workflow for parallel AI-assisted development
+description: Infrastructure for agentic workflows with Claude
 ---
 
 # Bearing
@@ -9,7 +9,17 @@ description: Worktree-based workflow for parallel AI-assisted development
 Bearing is experimental software. Read the [introductory blog post](https://www.joshribakoff.com/blog/deliberate-ai-use/). Expect breaking changes.
 :::
 
-Worktree-based workflow for parallel AI-assisted development.
+**The best orchestrator for Claude is Claude.**
+
+Bearing is not an orchestration framework. It's *infrastructure* that enables Claude to orchestrate itself.
+
+## What Bearing Provides
+
+- **Worktree management** — Isolated directories so parallel agents don't conflict
+- **Plan visualization** — TUI to see all plans across repos
+- **State sync** — JSONL files synced to GitHub issues for persistence
+- **Query tools** — CLI commands agents can use to understand workspace state
+- **Hooks** — Feed context to Claude Code agents automatically
 
 ## The Problem
 
@@ -17,7 +27,7 @@ Multiple AI agents working on the same codebase step on each other when they swi
 
 ## The Solution
 
-Bearing enforces a **worktree-per-task** pattern. Each task gets its own isolated directory. No branch switching, no conflicts.
+Bearing enforces a **worktree-per-task** pattern. Each task gets its own isolated directory. Claude orchestrates the work; Bearing provides the infrastructure.
 
 ## Install
 
