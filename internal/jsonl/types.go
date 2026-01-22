@@ -36,3 +36,10 @@ type ProjectEntry struct {
 	GitHubRepo string `json:"github_repo"`
 	Path       string `json:"path"`
 }
+
+// ClaudeSessionEntry tracks Claude Code sessions per worktree
+type ClaudeSessionEntry struct {
+	Folder    string    `json:"folder"`
+	SessionID string    `json:"session_id"`
+	LastUsed  time.Time `json:"last_used"`
+}

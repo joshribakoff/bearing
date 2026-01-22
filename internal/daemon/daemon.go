@@ -170,8 +170,10 @@ func (d *Daemon) runHealthCheck() {
 	}
 
 	var health []jsonl.HealthEntry
+	var folders []string
 	for _, e := range entries {
 		folderPath := filepath.Join(d.config.WorkspaceDir, e.Folder)
+		folders = append(folders, e.Folder)
 		h := jsonl.HealthEntry{
 			Folder:    e.Folder,
 			LastCheck: time.Now(),
@@ -194,6 +196,13 @@ func (d *Daemon) runHealthCheck() {
 
 	if err := store.WriteHealth(health); err != nil {
 		fmt.Printf("Error writing health.jsonl: %v\n", err)
+	}
+
+	// Scan for Claude sessions
+	scanner := NewSessionScanner(d.config.WorkspaceDir)
+	sessions := scanner.ScanAll(folders)
+	if err := store.WriteClaudeSessions(sessions); err != nil {
+		fmt.Printf("Error writing claude-sessions.jsonl: %v\n", err)
 	}
 }
 

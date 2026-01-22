@@ -32,6 +32,11 @@ func (s *Store) HealthPath() string {
 	return filepath.Join(s.baseDir, "health.jsonl")
 }
 
+// ClaudeSessionsPath returns the path to claude-sessions.jsonl
+func (s *Store) ClaudeSessionsPath() string {
+	return filepath.Join(s.baseDir, "claude-sessions.jsonl")
+}
+
 // ReadWorkflow reads all workflow entries
 func (s *Store) ReadWorkflow() ([]WorkflowEntry, error) {
 	return readJSONL[WorkflowEntry](s.WorkflowPath())
@@ -47,6 +52,11 @@ func (s *Store) ReadHealth() ([]HealthEntry, error) {
 	return readJSONL[HealthEntry](s.HealthPath())
 }
 
+// ReadClaudeSessions reads all Claude session entries
+func (s *Store) ReadClaudeSessions() ([]ClaudeSessionEntry, error) {
+	return readJSONL[ClaudeSessionEntry](s.ClaudeSessionsPath())
+}
+
 // WriteWorkflow writes all workflow entries (overwrites)
 func (s *Store) WriteWorkflow(entries []WorkflowEntry) error {
 	return writeJSONL(s.WorkflowPath(), entries)
@@ -60,6 +70,11 @@ func (s *Store) WriteLocal(entries []LocalEntry) error {
 // WriteHealth writes all health entries (overwrites)
 func (s *Store) WriteHealth(entries []HealthEntry) error {
 	return writeJSONL(s.HealthPath(), entries)
+}
+
+// WriteClaudeSessions writes all Claude session entries (overwrites)
+func (s *Store) WriteClaudeSessions(entries []ClaudeSessionEntry) error {
+	return writeJSONL(s.ClaudeSessionsPath(), entries)
 }
 
 // AppendWorkflow appends a workflow entry
