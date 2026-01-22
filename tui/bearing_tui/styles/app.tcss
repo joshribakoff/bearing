@@ -31,7 +31,6 @@ Screen {
 
 /* Title bar */
 #title {
-    dock: top;
     width: 100%;
     height: 1;
     background: $bg-surface;
@@ -86,7 +85,6 @@ Screen {
 
 /* Footer with keybindings */
 #footer-bar {
-    dock: bottom;
     width: 100%;
     height: 1;
     background: $bg-surface;
@@ -105,27 +103,27 @@ ProjectList {
     border: none;
 }
 
-ProjectList > ListItem {
+ProjectListItem {
     padding: 0 1;
     height: 1;
     background: transparent;
     color: $text;
 }
 
-ProjectList > ListItem:hover {
+ProjectListItem:hover {
     background: $bg-highlight;
 }
 
 /* Highlighted item - always show with blue background */
-ProjectList ListItem.--highlight {
-    background: $bg-selection !important;
-    color: $text-bright !important;
+ProjectListItem.-highlight {
+    background: $bg-selection;
+    color: $text-bright;
 }
 
 /* When focused, make it slightly brighter */
-ProjectList:focus ListItem.--highlight {
-    background: #2d5a8a !important;
-    color: $text-bright !important;
+ProjectList:focus ProjectListItem.-highlight {
+    background: #2d5a8a;
+    color: $text-bright;
     text-style: bold;
 }
 
@@ -146,14 +144,14 @@ WorktreeTable > .datatable--header {
 
 /* Cursor when table has focus - bright selection */
 WorktreeTable:focus > .datatable--cursor {
-    background: $bg-selection;
+    background: #2d5a8a;
     color: $text-bright;
     text-style: bold;
 }
 
 /* Cursor when table doesn't have focus - dimmer but visible */
 WorktreeTable > .datatable--cursor {
-    background: #1e3a5f;
+    background: $bg-selection;
     color: $text;
 }
 
@@ -237,4 +235,52 @@ Toast {
     background: $bg-surface;
     color: $text;
     border: round $accent-blue;
+}
+
+/* Plans modal styling */
+PlansScreen {
+    align: center middle;
+}
+
+#plans-modal {
+    width: 80;
+    height: auto;
+    max-height: 80%;
+    background: $bg-panel;
+    border: round $accent-purple;
+    padding: 1 2;
+}
+
+#plans-header {
+    height: 1;
+    margin-bottom: 1;
+}
+
+PlansList {
+    background: $bg-panel;
+    height: auto;
+    max-height: 20;
+    border: none;
+}
+
+PlanListItem {
+    padding: 0 1;
+    height: 1;
+    background: transparent;
+    color: $text;
+}
+
+PlanListItem:hover {
+    background: $bg-highlight;
+}
+
+PlanListItem.-highlight {
+    background: $bg-selection;
+    color: $text-bright;
+}
+
+PlansList:focus PlanListItem.-highlight {
+    background: #2d5a8a;
+    color: $text-bright;
+    text-style: bold;
 }
