@@ -121,3 +121,198 @@ func TestScanAll(t *testing.T) {
 		t.Errorf("expected 2 sessions, got %d", len(sessions))
 	}
 }
+
+func TestScanWorktreeIgnoresInvalidUUIDs(t *testing.T) {
+	workspaceDir := t.TempDir()
+	claudeDir := t.TempDir()
+
+	worktreePath := filepath.Join(workspaceDir, "test-worktree")
+	if err := os.MkdirAll(worktreePath, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	sessionDir := filepath.Join(claudeDir, pathToClaudeDir(worktreePath))
+	if err := os.MkdirAll(sessionDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create invalid files that should be ignored
+	invalidFiles := []string{
+		"not-a-uuid.jsonl",
+		"12345.jsonl",
+		"abc.txt",
+		".hidden-file",
+		"abc12345-1234-1234-1234-123456789abc.json", // wrong extension
+	}
+	for _, f := range invalidFiles {
+		if err := os.WriteFile(filepath.Join(sessionDir, f), []byte("{}"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	scanner := &SessionScanner{
+		workspaceDir: workspaceDir,
+		claudeDir:    claudeDir,
+	}
+
+	session := scanner.ScanWorktree("test-worktree")
+	if session != nil {
+		t.Errorf("expected nil (no valid sessions), got %+v", session)
+	}
+}
+
+func TestScanWorktreeIgnoresDirectories(t *testing.T) {
+	workspaceDir := t.TempDir()
+	claudeDir := t.TempDir()
+
+	worktreePath := filepath.Join(workspaceDir, "test-worktree")
+	if err := os.MkdirAll(worktreePath, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	sessionDir := filepath.Join(claudeDir, pathToClaudeDir(worktreePath))
+	if err := os.MkdirAll(sessionDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a directory with UUID-like name (should be ignored)
+	uuidDir := filepath.Join(sessionDir, "abc12345-1234-1234-1234-123456789abc.jsonl")
+	if err := os.MkdirAll(uuidDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	scanner := &SessionScanner{
+		workspaceDir: workspaceDir,
+		claudeDir:    claudeDir,
+	}
+
+	session := scanner.ScanWorktree("test-worktree")
+	if session != nil {
+		t.Errorf("expected nil (directory should be ignored), got %+v", session)
+	}
+}
+
+func TestScanWorktreeMixedValidInvalid(t *testing.T) {
+	workspaceDir := t.TempDir()
+	claudeDir := t.TempDir()
+
+	worktreePath := filepath.Join(workspaceDir, "test-worktree")
+	if err := os.MkdirAll(worktreePath, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	sessionDir := filepath.Join(claudeDir, pathToClaudeDir(worktreePath))
+	if err := os.MkdirAll(sessionDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create mix of valid and invalid files
+	validUUID := "abc12345-1234-1234-1234-123456789abc"
+	files := map[string]bool{
+		validUUID + ".jsonl":   true,  // valid
+		"not-a-uuid.jsonl":     false, // invalid
+		"random.txt":           false, // invalid
+		"another-invalid.json": false, // invalid
+	}
+
+	for name := range files {
+		if err := os.WriteFile(filepath.Join(sessionDir, name), []byte("{}"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	scanner := &SessionScanner{
+		workspaceDir: workspaceDir,
+		claudeDir:    claudeDir,
+	}
+
+	session := scanner.ScanWorktree("test-worktree")
+	if session == nil {
+		t.Fatal("expected session, got nil")
+	}
+
+	if session.SessionID != validUUID {
+		t.Errorf("sessionID = %q, want %q", session.SessionID, validUUID)
+	}
+}
+
+func TestScanWorktreeEmptySessionDir(t *testing.T) {
+	workspaceDir := t.TempDir()
+	claudeDir := t.TempDir()
+
+	worktreePath := filepath.Join(workspaceDir, "test-worktree")
+	if err := os.MkdirAll(worktreePath, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create empty session dir
+	sessionDir := filepath.Join(claudeDir, pathToClaudeDir(worktreePath))
+	if err := os.MkdirAll(sessionDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	scanner := &SessionScanner{
+		workspaceDir: workspaceDir,
+		claudeDir:    claudeDir,
+	}
+
+	session := scanner.ScanWorktree("test-worktree")
+	if session != nil {
+		t.Errorf("expected nil for empty session dir, got %+v", session)
+	}
+}
+
+func TestPathToClaudeDirEdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"standard path", "/Users/josh/Projects/foo", "-Users-josh-Projects-foo"},
+		{"linux path", "/home/user/work/project", "-home-user-work-project"},
+		{"nested path", "/a/b/c/d/e/f", "-a-b-c-d-e-f"},
+		{"root only", "/", "-"},
+		{"single dir", "/foo", "-foo"},
+		{"path with dashes", "/Users/josh/my-project", "-Users-josh-my-project"},
+		{"path with dots", "/Users/josh/project.v2", "-Users-josh-project.v2"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := pathToClaudeDir(tt.input)
+			if result != tt.expected {
+				t.Errorf("pathToClaudeDir(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestUUIDPatternMatching(t *testing.T) {
+	valid := []string{
+		"abc12345-1234-1234-1234-123456789abc.jsonl",
+		"00000000-0000-0000-0000-000000000000.jsonl",
+		"ffffffff-ffff-ffff-ffff-ffffffffffff.jsonl",
+		"12345678-abcd-ef01-2345-67890abcdef0.jsonl",
+	}
+	invalid := []string{
+		"ABC12345-1234-1234-1234-123456789ABC.jsonl", // uppercase
+		"abc12345-1234-1234-1234-123456789abc.json",  // wrong extension
+		"abc12345-1234-1234-1234-123456789abc",       // no extension
+		"abc12345-1234-1234-1234.jsonl",              // missing segment
+		"abc1234-1234-1234-1234-123456789abc.jsonl",  // wrong length
+		"not-a-uuid-at-all.jsonl",
+		"",
+	}
+
+	for _, v := range valid {
+		if !uuidPattern.MatchString(v) {
+			t.Errorf("expected %q to match UUID pattern", v)
+		}
+	}
+
+	for _, inv := range invalid {
+		if uuidPattern.MatchString(inv) {
+			t.Errorf("expected %q NOT to match UUID pattern", inv)
+		}
+	}
+}
