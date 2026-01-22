@@ -2,6 +2,8 @@ package daemon
 
 import (
 	"fmt"
+	"io/fs"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -14,17 +16,22 @@ import (
 	"github.com/joshribakoff/bearing/internal/jsonl"
 )
 
+// HTTPPort is the port the HTTP server listens on
+const HTTPPort = 8374
+
 // Config holds daemon configuration
 type Config struct {
 	WorkspaceDir string
 	BearingDir   string
 	Interval     time.Duration
+	StaticFS     fs.FS // Optional: embedded static files for web dashboard
 }
 
 // Daemon manages the health monitoring background process
 type Daemon struct {
-	config Config
-	stop   chan struct{}
+	config     Config
+	stop       chan struct{}
+	httpServer *HTTPServer
 }
 
 // New creates a new daemon instance
@@ -133,6 +140,18 @@ func (d *Daemon) run() error {
 		return err
 	}
 
+	// Start HTTP server for web dashboard
+	store := jsonl.NewStore(d.config.WorkspaceDir)
+	d.httpServer = NewHTTPServer(store, d.config.WorkspaceDir, d.config.StaticFS)
+
+	go func() {
+		addr := fmt.Sprintf(":%d", HTTPPort)
+		fmt.Printf("HTTP server listening on http://localhost%s\n", addr)
+		if err := http.ListenAndServe(addr, d.httpServer.Handler()); err != nil {
+			fmt.Printf("HTTP server error: %v\n", err)
+		}
+	}()
+
 	// Handle signals
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
@@ -194,6 +213,14 @@ func (d *Daemon) runHealthCheck() {
 
 	if err := store.WriteHealth(health); err != nil {
 		fmt.Printf("Error writing health.jsonl: %v\n", err)
+	}
+
+	// Broadcast update to connected web clients
+	if d.httpServer != nil {
+		d.httpServer.Broadcast("health", map[string]interface{}{
+			"timestamp":     time.Now(),
+			"worktreeCount": len(health),
+		})
 	}
 }
 
