@@ -561,7 +561,7 @@ class BearingApp(App):
                 repo=w.repo,
                 branch=w.branch,
                 base=w.base,
-                purpose=workflow.purpose if workflow else None,
+                plan=workflow.purpose if workflow else None,
             ))
 
         health_map = {}
