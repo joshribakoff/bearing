@@ -53,6 +53,51 @@ Bearing is not an orchestration framework. It's *infrastructure* that enables Cl
 
 ---
 
+## 🚀 Work Clusters
+
+A **Work Cluster** is a named pattern for implementing related features with parallel agents:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     WORK CLUSTER                            │
+├─────────────────────────────────────────────────────────────┤
+│  1. CLUSTER    │  Group related plans into a cluster        │
+│  2. IMPLEMENT  │  Parallel agents implement in worktrees    │
+│  3. TEST       │  Hand off to testing agents                │
+│  4. ADVERSARY  │  Agents insert bugs, verify tests catch    │
+│  5. INTEGRATE  │  Merge to integration branch, test locally │
+│  6. SHIP       │  Create PRs, merge to main                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Example
+
+```
+> Cluster the activity-feed and claude-integration plans.
+> Implement them with parallel background agents.
+> Hand off to testing agents when implementation is done.
+> Run adversarial testing—insert bugs, verify tests catch them.
+> Merge everything to an integration branch so I can test locally.
+```
+
+**What happens:**
+1. Claude creates worktrees: `bearing-activity-feed`, `bearing-claude-integration`
+2. Spawns background agents, each working in its worktree
+3. When done, spawns testing agents to add/run tests
+4. Adversarial agents intentionally break code, verify tests fail
+5. All branches merge to `work-cluster-jan21` integration branch
+6. You test locally, then individual PRs get created
+
+### Why This Works
+
+- **Isolation** — Each agent has its own worktree, no conflicts
+- **Parallelism** — Agents work simultaneously on related features
+- **Quality** — Testing and adversarial phases catch bugs early
+- **Visibility** — TUI shows all worktrees and their status
+- **Control** — You approve the integration branch before PRs
+
+---
+
 ## 🖥️ Beautiful Terminal UI
 
 ![Bearing TUI](docs/public/images/tui-screenshot.svg)

@@ -32,6 +32,11 @@ func (s *Store) HealthPath() string {
 	return filepath.Join(s.baseDir, "health.jsonl")
 }
 
+// ActivityPath returns the path to activity.jsonl
+func (s *Store) ActivityPath() string {
+	return filepath.Join(s.baseDir, "activity.jsonl")
+}
+
 // ReadWorkflow reads all workflow entries
 func (s *Store) ReadWorkflow() ([]WorkflowEntry, error) {
 	return readJSONL[WorkflowEntry](s.WorkflowPath())
@@ -45,6 +50,11 @@ func (s *Store) ReadLocal() ([]LocalEntry, error) {
 // ReadHealth reads all health entries
 func (s *Store) ReadHealth() ([]HealthEntry, error) {
 	return readJSONL[HealthEntry](s.HealthPath())
+}
+
+// ReadActivity reads all activity events
+func (s *Store) ReadActivity() ([]ActivityEvent, error) {
+	return readJSONL[ActivityEvent](s.ActivityPath())
 }
 
 // WriteWorkflow writes all workflow entries (overwrites)
@@ -70,6 +80,11 @@ func (s *Store) AppendWorkflow(entry WorkflowEntry) error {
 // AppendLocal appends a local entry
 func (s *Store) AppendLocal(entry LocalEntry) error {
 	return appendJSONL(s.LocalPath(), entry)
+}
+
+// AppendActivity appends an activity event
+func (s *Store) AppendActivity(event ActivityEvent) error {
+	return appendJSONL(s.ActivityPath(), event)
 }
 
 func readJSONL[T any](path string) ([]T, error) {

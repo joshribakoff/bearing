@@ -23,15 +23,18 @@ type Config struct {
 
 // Daemon manages the health monitoring background process
 type Daemon struct {
-	config Config
-	stop   chan struct{}
+	config          Config
+	stop            chan struct{}
+	activityTracker *ActivityTracker
 }
 
 // New creates a new daemon instance
 func New(config Config) *Daemon {
+	store := jsonl.NewStore(config.WorkspaceDir)
 	return &Daemon{
-		config: config,
-		stop:   make(chan struct{}),
+		config:          config,
+		stop:            make(chan struct{}),
+		activityTracker: NewActivityTracker(store),
 	}
 }
 
@@ -181,13 +184,17 @@ func (d *Daemon) runHealthCheck() {
 		h.Dirty, _ = repo.IsDirty()
 		h.Unpushed, _ = repo.UnpushedCount(e.Branch)
 
+		var ghClient *gh.Client
 		if !e.Base {
-			ghClient := gh.NewClient(folderPath)
+			ghClient = gh.NewClient(folderPath)
 			if pr, _ := ghClient.GetPR(e.Branch); pr != nil {
 				h.PRState = &pr.State
 				h.PRTitle = &pr.Title
 			}
 		}
+
+		// Track activity events
+		d.activityTracker.CheckForActivity(folderPath, e, ghClient, repo)
 
 		health = append(health, h)
 	}

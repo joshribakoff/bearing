@@ -36,3 +36,15 @@ type ProjectEntry struct {
 	GitHubRepo string `json:"github_repo"`
 	Path       string `json:"path"`
 }
+
+// ActivityEvent tracks workspace activity in activity.jsonl
+type ActivityEvent struct {
+	Timestamp time.Time `json:"timestamp"`
+	Type      string    `json:"type"` // pr_opened, pr_merged, pr_closed, commit_pushed, test_pass, test_fail
+	Repo      string    `json:"repo"`
+	Branch    string    `json:"branch"`
+	PRNumber  int       `json:"pr_number,omitempty"`
+	Title     string    `json:"title,omitempty"`
+	Commit    string    `json:"commit,omitempty"`
+	Message   string    `json:"message,omitempty"`
+}

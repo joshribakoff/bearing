@@ -104,6 +104,16 @@ func (r *Repo) Fetch() error {
 	return err
 }
 
+// HeadCommit returns the HEAD commit hash (short form)
+func (r *Repo) HeadCommit() (string, error) {
+	return r.run("rev-parse", "--short", "HEAD")
+}
+
+// CommitMessage returns the commit message for a given commit
+func (r *Repo) CommitMessage(commit string) (string, error) {
+	return r.run("log", "-1", "--format=%s", commit)
+}
+
 // RemoteBranchExists checks if a remote branch exists
 func (r *Repo) RemoteBranchExists(branch string) bool {
 	_, err := r.run("rev-parse", "--verify", fmt.Sprintf("origin/%s", branch))
