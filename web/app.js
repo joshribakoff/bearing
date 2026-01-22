@@ -10,6 +10,7 @@ const state = {
   plans: [],
   selectedProject: null,
   selectedWorktree: null,
+  selectedWorktreeFolder: null, // Persisted - the folder name survives reload
   selectedPlan: null,
   focusedPanel: 'project-list',
   projectIndex: 0,
@@ -67,9 +68,13 @@ function init() {
 
 // State persistence
 function saveState() {
+  // Store the actual worktree folder, not the index (index changes with sort order)
+  const filtered = state.worktrees.filter(w => w.repo === state.selectedProject);
+  const selectedWorktree = filtered[state.worktreeIndex];
+
   const persisted = {
     selectedProject: state.selectedProject,
-    worktreeIndex: state.worktreeIndex,
+    selectedWorktreeFolder: selectedWorktree?.folder || null,
     sortColumn: state.sortColumn,
     sortDirection: state.sortDirection,
     currentView: state.currentView,
@@ -83,7 +88,7 @@ function loadState() {
     if (saved) {
       const persisted = JSON.parse(saved);
       state.selectedProject = persisted.selectedProject || null;
-      state.worktreeIndex = persisted.worktreeIndex || 0;
+      state.selectedWorktreeFolder = persisted.selectedWorktreeFolder || null;
       state.sortColumn = persisted.sortColumn || 'default';
       state.sortDirection = persisted.sortDirection || 'asc';
       state.currentView = persisted.currentView || 'worktrees';
@@ -213,6 +218,18 @@ function updateSortIndicators() {
 function renderWorktrees() {
   const filtered = sortWorktrees(state.worktrees.filter(w => w.repo === state.selectedProject));
 
+  // Restore selection from persisted folder name
+  if (state.selectedWorktreeFolder) {
+    const idx = filtered.findIndex(w => w.folder === state.selectedWorktreeFolder);
+    if (idx >= 0) {
+      state.worktreeIndex = idx;
+    } else {
+      // Worktree no longer exists, reset
+      state.worktreeIndex = 0;
+      state.selectedWorktreeFolder = filtered[0]?.folder || null;
+    }
+  }
+
   els.worktreeRows.innerHTML = filtered.map((w, i) => {
     const statusParts = [];
     if (w.dirty) statusParts.push('<span class="status-dirty">*</span>');
@@ -317,10 +334,11 @@ function selectProject(name) {
 }
 
 function selectWorktree(index) {
-  const filtered = state.worktrees.filter(w => w.repo === state.selectedProject);
+  const filtered = sortWorktrees(state.worktrees.filter(w => w.repo === state.selectedProject));
   if (index < 0 || index >= filtered.length) return;
 
   state.worktreeIndex = index;
+  state.selectedWorktreeFolder = filtered[index].folder;
 
   els.worktreeRows.querySelectorAll('.table-row').forEach((el, i) => {
     el.classList.toggle('selected', i === index);
