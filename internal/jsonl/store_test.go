@@ -106,3 +106,28 @@ not json at all
 		t.Errorf("expected 2 valid entries, got %d", len(got))
 	}
 }
+
+func TestReadProjects(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "projects.jsonl")
+
+	content := `{"name": "sailkit", "github_repo": "user/sailkit", "path": "sailkit"}
+{"name": "bearing", "github_repo": "user/bearing", "path": "bearing"}
+`
+	os.WriteFile(path, []byte(content), 0644)
+
+	store := NewStore(dir)
+	got, err := store.ReadProjects()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 {
+		t.Errorf("expected 2 projects, got %d", len(got))
+	}
+	if got[0].Name != "sailkit" {
+		t.Errorf("expected sailkit, got %s", got[0].Name)
+	}
+	if got[1].Path != "bearing" {
+		t.Errorf("expected bearing path, got %s", got[1].Path)
+	}
+}

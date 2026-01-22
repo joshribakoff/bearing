@@ -196,11 +196,7 @@ func (d *Daemon) run() error {
 
 func (d *Daemon) runHealthCheck() {
 	store := jsonl.NewStore(d.config.WorkspaceDir)
-	entries, err := store.ReadLocal()
-	if err != nil {
-		fmt.Printf("Error reading local.jsonl: %v\n", err)
-		return
-	}
+	entries := d.discoverWorktrees(store)
 
 	var health []jsonl.HealthEntry
 	for _, e := range entries {
@@ -236,6 +232,61 @@ func (d *Daemon) runHealthCheck() {
 			"worktreeCount": len(health),
 		})
 	}
+}
+
+// discoverWorktrees finds all worktrees by scanning projects from projects.jsonl
+// and running `git worktree list` for each. Merges with local.jsonl for local-only entries.
+func (d *Daemon) discoverWorktrees(store *jsonl.Store) []jsonl.LocalEntry {
+	discovered := make(map[string]jsonl.LocalEntry) // keyed by folder name
+
+	// Read projects and discover worktrees via git
+	projects, err := store.ReadProjects()
+	if err != nil {
+		fmt.Printf("Error reading projects.jsonl: %v\n", err)
+	}
+
+	for _, proj := range projects {
+		basePath := filepath.Join(d.config.WorkspaceDir, proj.Path)
+		repo := git.NewRepo(basePath)
+		worktrees, err := repo.WorktreeList()
+		if err != nil {
+			fmt.Printf("Error listing worktrees for %s: %v\n", proj.Name, err)
+			continue
+		}
+
+		for _, wt := range worktrees {
+			if wt.Bare {
+				continue
+			}
+			// Get folder name relative to workspace
+			folder := filepath.Base(wt.Path)
+			isBase := folder == proj.Path
+			discovered[folder] = jsonl.LocalEntry{
+				Folder: folder,
+				Repo:   proj.Name,
+				Branch: wt.Branch,
+				Base:   isBase,
+			}
+		}
+	}
+
+	// Merge with local.jsonl for any local-only entries not discovered via git
+	localEntries, err := store.ReadLocal()
+	if err != nil {
+		fmt.Printf("Error reading local.jsonl: %v\n", err)
+	}
+	for _, le := range localEntries {
+		if _, exists := discovered[le.Folder]; !exists {
+			discovered[le.Folder] = le
+		}
+	}
+
+	// Convert map to slice
+	result := make([]jsonl.LocalEntry, 0, len(discovered))
+	for _, entry := range discovered {
+		result = append(result, entry)
+	}
+	return result
 }
 
 // Stop sends a stop signal to a running daemon
