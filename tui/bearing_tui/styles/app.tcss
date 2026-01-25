@@ -83,15 +83,7 @@ Screen {
     padding: 0 1;
 }
 
-/* Footer with keybindings */
-#footer-bar {
-    width: 100%;
-    height: 1;
-    background: $bg-surface;
-    color: $text-dim;
-    padding: 0 1;
-    border-top: solid $border;
-}
+/* Footer uses Textual's built-in Footer widget */
 
 /* Project list styling */
 ProjectList {

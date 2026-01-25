@@ -1,10 +1,9 @@
-"""Tests for PlansScreen modal."""
+"""Tests for plans loading and frontmatter parsing."""
 import json
 import pytest
 from pathlib import Path
 
-from bearing_tui.app import BearingApp, PlansScreen
-from bearing_tui.widgets.plans import PlansList, PlanEntry, load_plans, parse_plan_frontmatter
+from bearing_tui.widgets.plans import load_plans, parse_plan_frontmatter
 
 
 # =============================================================================
@@ -105,142 +104,7 @@ def workspace_empty_plans(tmp_path):
 
 
 # =============================================================================
-# PLANS MODAL TESTS
-# =============================================================================
-
-@pytest.mark.asyncio
-async def test_plans_modal_opens(workspace_with_plans):
-    """Press 'p' opens the plans modal."""
-    app = BearingApp(workspace=workspace_with_plans)
-    async with app.run_test(size=(100, 25)) as pilot:
-        await pilot.pause()
-
-        await pilot.press("p")
-        await pilot.pause()
-
-        assert len(app.screen_stack) == 2
-        assert isinstance(app.screen, PlansScreen)
-
-
-@pytest.mark.asyncio
-async def test_plans_modal_closes_with_escape(workspace_with_plans):
-    """Plans modal closes with escape key."""
-    app = BearingApp(workspace=workspace_with_plans)
-    async with app.run_test(size=(100, 25)) as pilot:
-        await pilot.pause()
-
-        await pilot.press("p")
-        await pilot.pause()
-        assert isinstance(app.screen, PlansScreen)
-
-        await pilot.press("escape")
-        await pilot.pause()
-        assert len(app.screen_stack) == 1
-
-
-@pytest.mark.asyncio
-async def test_plans_modal_closes_with_p(workspace_with_plans):
-    """Plans modal closes when pressing 'p' again."""
-    app = BearingApp(workspace=workspace_with_plans)
-    async with app.run_test(size=(100, 25)) as pilot:
-        await pilot.pause()
-
-        await pilot.press("p")
-        await pilot.pause()
-        assert isinstance(app.screen, PlansScreen)
-
-        await pilot.press("p")
-        await pilot.pause()
-        assert len(app.screen_stack) == 1
-
-
-@pytest.mark.asyncio
-async def test_plans_modal_q_quits_app(workspace_with_plans):
-    """Pressing 'q' in plans modal quits the app."""
-    app = BearingApp(workspace=workspace_with_plans)
-    async with app.run_test(size=(100, 25)) as pilot:
-        await pilot.pause()
-
-        await pilot.press("p")
-        await pilot.pause()
-        assert isinstance(app.screen, PlansScreen)
-
-        await pilot.press("q")
-        assert app._exit is True
-
-
-@pytest.mark.asyncio
-async def test_plans_modal_ctrl_c_quits_app(workspace_with_plans):
-    """Pressing Ctrl+C in plans modal quits the app."""
-    app = BearingApp(workspace=workspace_with_plans)
-    async with app.run_test(size=(100, 25)) as pilot:
-        await pilot.pause()
-
-        await pilot.press("p")
-        await pilot.pause()
-        assert isinstance(app.screen, PlansScreen)
-
-        await pilot.press("ctrl+c")
-        assert app._exit is True
-
-
-@pytest.mark.asyncio
-async def test_plans_modal_navigation(workspace_with_plans):
-    """Navigate plans list with j/k keys."""
-    app = BearingApp(workspace=workspace_with_plans)
-    async with app.run_test(size=(100, 25)) as pilot:
-        await pilot.pause()
-
-        await pilot.press("p")
-        await pilot.pause()
-
-        plans_list = app.screen.query_one(PlansList)
-        initial_index = plans_list.index
-
-        # Navigate down
-        await pilot.press("j")
-        await pilot.pause()
-
-        # Index should have changed (if there are multiple plans)
-        if len(plans_list._plans) > 1:
-            assert plans_list.index != initial_index or plans_list.index == 0
-
-
-@pytest.mark.asyncio
-async def test_plans_modal_empty_workspace(workspace_no_plans):
-    """Plans modal handles workspace with no plans directory."""
-    app = BearingApp(workspace=workspace_no_plans)
-    async with app.run_test(size=(100, 25)) as pilot:
-        await pilot.pause()
-
-        await pilot.press("p")
-        await pilot.pause()
-
-        # Should open without crashing
-        assert isinstance(app.screen, PlansScreen)
-
-        await pilot.press("escape")
-        await pilot.pause()
-        assert len(app.screen_stack) == 1
-
-
-@pytest.mark.asyncio
-async def test_plans_modal_empty_plans_dir(workspace_empty_plans):
-    """Plans modal handles empty plans directory."""
-    app = BearingApp(workspace=workspace_empty_plans)
-    async with app.run_test(size=(100, 25)) as pilot:
-        await pilot.pause()
-
-        await pilot.press("p")
-        await pilot.pause()
-
-        assert isinstance(app.screen, PlansScreen)
-        plans_list = app.screen.query_one(PlansList)
-        assert len(plans_list._plans) == 0
-
-
-# =============================================================================
-# PLAN LOADING TESTS
+# PLAN LOADING TESTS (Modal tests removed - fullscreen view now used)
 # =============================================================================
 
 def test_load_plans_from_workspace(workspace_with_plans):

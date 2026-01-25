@@ -1,7 +1,30 @@
 """Pytest fixtures for Bearing TUI tests."""
 import shutil
+from pathlib import Path
 
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def isolate_session(tmp_path, monkeypatch):
+    """Isolate session file to temp directory to avoid affecting real user state.
+
+    pytest's tmp_path fixture creates a UNIQUE temp directory per test, e.g.:
+    /tmp/pytest-of-user/pytest-123/test_foo0/
+    /tmp/pytest-of-user/pytest-123/test_bar0/
+    So tests won't clobber each other.
+    """
+    # Create temp .bearing directory in this test's unique tmp_path
+    temp_bearing = tmp_path / ".bearing"
+    temp_bearing.mkdir()
+
+    # Monkeypatch Path.home() to return this test's temp directory
+    # This ensures tests don't read/write the user's real ~/.bearing/
+    def mock_home():
+        return tmp_path
+
+    monkeypatch.setattr(Path, "home", staticmethod(mock_home))
+    yield
 
 from tests.mock_data import (
     create_normal_workspace,

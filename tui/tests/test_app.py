@@ -342,8 +342,9 @@ async def test_view_switching_to_worktrees(workspace):
 
 @pytest.mark.asyncio
 async def test_view_switch_preserves_project_selection(workspace):
-    """Test that project selection persists when switching between views."""
+    """Test that project selection AND focus persist when switching views."""
     from bearing_tui.app import ViewMode
+    from bearing_tui.widgets import PlansTable
 
     # Create plans directory
     plans_dir = workspace / "plans" / "myapp"
@@ -352,15 +353,15 @@ async def test_view_switch_preserves_project_selection(workspace):
 
     app = BearingApp(workspace=workspace)
     async with app.run_test() as pilot:
-        # Select a project
-        project_list = app.query_one(ProjectList)
+        # Select a project (this auto-focuses worktree table)
         await pilot.press("j")  # Move to first project
         await pilot.press("enter")
         await pilot.pause()
 
-        # Verify project is selected
+        # Verify project is selected and worktree table is focused
         assert app._current_project is not None
         selected_project = app._current_project
+        assert app.focused.id == "worktree-table"
 
         # Switch to plans view
         await pilot.press("p")
@@ -369,6 +370,8 @@ async def test_view_switch_preserves_project_selection(workspace):
         # Project selection should persist
         assert app._current_project == selected_project
         assert app._view_mode == ViewMode.PLANS
+        # Focus should be on plans table (panel 1), NOT project list (panel 0)
+        assert app.focused.id == "plans-table"
 
         # Switch back to worktrees
         await pilot.press("w")
@@ -377,31 +380,18 @@ async def test_view_switch_preserves_project_selection(workspace):
         # Project selection should still persist
         assert app._current_project == selected_project
         assert app._view_mode == ViewMode.WORKTREES
+        # Focus should be on worktree table (panel 1)
+        assert app.focused.id == "worktree-table"
 
 
 @pytest.mark.asyncio
-async def test_footer_shows_current_mode(workspace):
-    """Test that footer highlights current mode."""
-    from bearing_tui.app import ViewMode
+async def test_footer_widget_exists(workspace):
+    """Test that footer widget is present."""
+    from textual.widgets import Footer
 
     app = BearingApp(workspace=workspace)
     async with app.run_test() as pilot:
-        # In worktrees mode
-        assert app._view_mode == ViewMode.WORKTREES
-
-        # The _get_footer_text method should return text with worktrees highlighted
-        footer_text = app._get_footer_text()
-        assert "[bold cyan][w]orktrees[/]" in footer_text
-        assert "[dim][p]lans[/]" in footer_text
-
-        # Switch to plans
-        await pilot.press("p")
         await pilot.pause()
-
-        # In plans mode
-        assert app._view_mode == ViewMode.PLANS
-
-        # Footer should now highlight plans
-        footer_text = app._get_footer_text()
-        assert "[dim][w]orktrees[/]" in footer_text
-        assert "[bold cyan][p]lans[/]" in footer_text
+        footer = app.query_one(Footer)
+        assert footer is not None
+        assert footer.display is True

@@ -67,9 +67,17 @@ class ProjectList(ListView):
         if not projects:
             self.append(ListItem(Static("No projects found")))
         else:
+            selection_index = None
             for i, project in enumerate(projects):
                 count = self._counts.get(project, 0)
-                self.append(ProjectListItem(project, count))
-                # Restore selection if this is the preserved project
+                item = ProjectListItem(project, count)
+                self.append(item)
+                # Track selection for restoration after all items added
                 if preserve_selection and project == preserve_selection:
-                    self.index = i
+                    selection_index = i
+            # Restore selection after all items are added
+            if selection_index is not None:
+                self.index = selection_index
+                # Manually set highlighted since watch_index may not fire correctly
+                if self.highlighted_child:
+                    self.highlighted_child.highlighted = True
