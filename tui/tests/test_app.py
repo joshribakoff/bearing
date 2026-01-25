@@ -79,14 +79,14 @@ async def test_keyboard_navigation(workspace):
     """Test 0-indexed panel keyboard navigation."""
     app = BearingApp(workspace=workspace)
     async with app.run_test() as pilot:
-        # Initial focus should be on project list
+        # Fresh start (no session) focuses project list
         assert isinstance(app.focused, ProjectList)
 
         # Press 1 to focus worktree table
         await pilot.press("1")
         assert isinstance(app.focused, WorktreeTable)
 
-        # Press 0 to focus back to project list
+        # Press 0 to focus project list
         await pilot.press("0")
         assert isinstance(app.focused, ProjectList)
 
@@ -129,7 +129,7 @@ async def test_tab_navigation(workspace):
     """Test Tab key cycles through panels."""
     app = BearingApp(workspace=workspace)
     async with app.run_test() as pilot:
-        # Start at project list
+        # Fresh start (no session) focuses project list
         assert app.focused.id == "project-list"
 
         # Tab to worktree table

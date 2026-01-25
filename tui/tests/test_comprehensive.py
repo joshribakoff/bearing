@@ -455,8 +455,8 @@ async def test_details_shows_all_fields(workspace):
 
 
 @pytest.mark.asyncio
-async def test_details_clears_on_refresh(workspace):
-    """Test that details panel clears when refresh is triggered."""
+async def test_details_preserved_on_refresh(workspace):
+    """Test that details panel is preserved when refresh is triggered."""
     app = BearingApp(workspace=workspace)
     async with app.run_test(size=(100, 25)) as pilot:
         await pilot.pause()
@@ -474,13 +474,14 @@ async def test_details_clears_on_refresh(workspace):
         details = app.query_one(DetailsPanel)
         # After selecting, should have folder set
         assert details.current_folder is not None
+        saved_folder = details.current_folder
 
         # Refresh
         await pilot.press("r")
         await pilot.pause()
 
-        # After refresh, details should be cleared
-        assert details.current_folder is None
+        # After refresh, details should be preserved (not cleared)
+        assert details.current_folder == saved_folder
 
 
 # ============================================================================
@@ -554,3 +555,112 @@ async def test_worktree_selection_triggers_details(workspace):
 
         # Details should now have a folder set
         assert details.current_folder is not None
+
+
+# ============================================================================
+# Mouse Click Support
+# ============================================================================
+
+@pytest.mark.asyncio
+async def test_project_list_mouse_click_selects(workspace):
+    """Test that clicking on a project list item selects it."""
+    app = BearingApp(workspace=workspace)
+    async with app.run_test(size=(100, 25)) as pilot:
+        await pilot.pause()
+
+        project_list = app.query_one(ProjectList)
+        worktree_table = app.query_one(WorktreeTable)
+
+        # Get the second project item (index 1)
+        items = list(project_list.query("ProjectListItem"))
+        assert len(items) >= 2, "Need at least 2 projects for this test"
+
+        target_item = items[1]  # Second project
+
+        # Click on the item
+        await pilot.click(target_item)
+        await pilot.pause()
+
+        # Project should be selected (worktree table populated)
+        assert worktree_table.row_count > 0
+        # The current project should be set
+        assert app._current_project is not None
+
+
+@pytest.mark.asyncio
+async def test_worktree_table_mouse_click_selects(workspace):
+    """Test that clicking on a worktree table row selects it."""
+    app = BearingApp(workspace=workspace)
+    async with app.run_test(size=(100, 25)) as pilot:
+        await pilot.pause()
+
+        # First select a project to populate worktrees
+        await pilot.press("0")
+        await pilot.press("j")
+        await pilot.press("enter")
+        await pilot.pause()
+
+        worktree_table = app.query_one(WorktreeTable)
+        details = app.query_one(DetailsPanel)
+
+        assert worktree_table.row_count > 1, "Need multiple worktrees for this test"
+
+        # Click on the worktree table - clicking the widget moves cursor
+        await pilot.click(worktree_table)
+        await pilot.pause()
+
+        # Now double-click or use Enter to trigger selection
+        # DataTable requires Enter or double-click to emit RowSelected
+        await pilot.press("enter")
+        await pilot.pause()
+
+        # Details panel should be updated
+        assert details.current_folder is not None
+
+
+@pytest.mark.asyncio
+async def test_mouse_click_focuses_panel(workspace):
+    """Test that clicking on a panel focuses it."""
+    app = BearingApp(workspace=workspace)
+    async with app.run_test(size=(100, 25)) as pilot:
+        await pilot.pause()
+
+        project_list = app.query_one(ProjectList)
+        worktree_table = app.query_one(WorktreeTable)
+
+        # Start focused on project list
+        await pilot.press("0")
+        await pilot.pause()
+        assert app.focused.id == "project-list"
+
+        # Click on worktree table
+        await pilot.click(worktree_table)
+        await pilot.pause()
+
+        # Focus should move to worktree table
+        assert app.focused.id == "worktree-table"
+
+        # Note: Clicking on a project list item selects the project AND
+        # automatically focuses the worktree table (by design - see
+        # on_project_list_project_selected). This is good UX - after selecting
+        # a project, you typically want to interact with its worktrees.
+
+
+@pytest.mark.asyncio
+async def test_mouse_click_on_worktree_table_focuses(workspace):
+    """Test that clicking on the worktree table focuses it."""
+    app = BearingApp(workspace=workspace)
+    async with app.run_test(size=(100, 25)) as pilot:
+        await pilot.pause()
+
+        worktree_table = app.query_one(WorktreeTable)
+
+        # Start focused on project list
+        await pilot.press("0")
+        await pilot.pause()
+        assert app.focused.id == "project-list"
+
+        # Click on worktree table - should focus it
+        await pilot.click(worktree_table)
+        await pilot.pause()
+        assert app.focused.id == "worktree-table"

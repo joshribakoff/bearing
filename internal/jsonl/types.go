@@ -26,6 +26,7 @@ type HealthEntry struct {
 	Dirty     bool      `json:"dirty"`
 	Unpushed  int       `json:"unpushed"`
 	PRState   *string   `json:"prState,omitempty"`
+	PRTitle   *string   `json:"prTitle,omitempty"`
 	LastCheck time.Time `json:"lastCheck"`
 }
 

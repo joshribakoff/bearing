@@ -12,13 +12,13 @@ const { prev, next } = Astro.props;
 {(prev || next) && (
   <nav class="prev-next">
     {prev ? (
-      <a href={`/${prev}/`} class="prev-next-link prev">
+      <a href={`/docs/${prev}/`} class="prev-next-link prev">
         <span class="prev-next-label">Previous</span>
         <span class="prev-next-title">{getTitle(prev)}</span>
       </a>
     ) : <div></div>}
     {next ? (
-      <a href={`/${next}/`} class="prev-next-link next">
+      <a href={`/docs/${next}/`} class="prev-next-link next">
         <span class="prev-next-label">Next</span>
         <span class="prev-next-title">{getTitle(next)}</span>
       </a>

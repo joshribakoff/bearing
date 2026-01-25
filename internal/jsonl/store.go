@@ -32,6 +32,11 @@ func (s *Store) HealthPath() string {
 	return filepath.Join(s.baseDir, "health.jsonl")
 }
 
+// ProjectsPath returns the path to projects.jsonl
+func (s *Store) ProjectsPath() string {
+	return filepath.Join(s.baseDir, "projects.jsonl")
+}
+
 // ReadWorkflow reads all workflow entries
 func (s *Store) ReadWorkflow() ([]WorkflowEntry, error) {
 	return readJSONL[WorkflowEntry](s.WorkflowPath())
@@ -45,6 +50,11 @@ func (s *Store) ReadLocal() ([]LocalEntry, error) {
 // ReadHealth reads all health entries
 func (s *Store) ReadHealth() ([]HealthEntry, error) {
 	return readJSONL[HealthEntry](s.HealthPath())
+}
+
+// ReadProjects reads all project entries
+func (s *Store) ReadProjects() ([]ProjectEntry, error) {
+	return readJSONL[ProjectEntry](s.ProjectsPath())
 }
 
 // WriteWorkflow writes all workflow entries (overwrites)

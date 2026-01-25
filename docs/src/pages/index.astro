@@ -1,12 +1,648 @@
 ---
-import { getEntry } from 'astro:content';
-import DocsLayout from '../layouts/DocsLayout.astro';
-
-const entry = await getEntry('docs', 'index');
-if (!entry) throw new Error('Index page not found');
-const { Content } = await entry.render();
+import { initScript } from 'sailkit/packages/lantern';
+import ThemeToggle from 'sailkit/packages/lantern/ThemeToggle.astro';
 ---
 
-<DocsLayout title={entry.data.title} slug="index">
-  <Content />
-</DocsLayout>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bearing - One conversation. Full control.</title>
+    <meta name="description" content="Manage parallel AI workstreams without the chaos. Git worktree management for Claude Code." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script is:inline set:html={initScript} />
+    <style>
+      :root {
+        --color-bg: #0a0e17;
+        --color-bg-elevated: #111827;
+        --color-text: #e2e8f0;
+        --color-text-muted: #64748b;
+        --color-accent: #3b82f6;
+        --color-accent-glow: rgba(59, 130, 246, 0.4);
+        --color-border: rgba(255, 255, 255, 0.08);
+        --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+        --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+      }
+
+      [data-theme="light"] {
+        --color-bg: #f8fafc;
+        --color-bg-elevated: #ffffff;
+        --color-text: #1e293b;
+        --color-text-muted: #64748b;
+        --color-accent: #2563eb;
+        --color-accent-glow: rgba(37, 99, 235, 0.2);
+        --color-border: rgba(0, 0, 0, 0.08);
+      }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      html {
+        font-family: var(--font-sans);
+        background: var(--color-bg);
+        color: var(--color-text);
+        scroll-behavior: smooth;
+      }
+
+      body {
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* Animated background grid */
+      .bg-grid {
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+        background-size: 60px 60px;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      [data-theme="light"] .bg-grid {
+        background-image:
+          linear-gradient(rgba(37, 99, 235, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(37, 99, 235, 0.05) 1px, transparent 1px);
+      }
+
+      /* Radial glow behind hero */
+      .bg-glow {
+        position: fixed;
+        top: -20%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 140%;
+        height: 80%;
+        background: radial-gradient(ellipse at center, var(--color-accent-glow) 0%, transparent 60%);
+        pointer-events: none;
+        z-index: 0;
+        opacity: 0.6;
+      }
+
+      /* Navigation */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        padding: 1rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(to bottom, var(--color-bg), transparent);
+        backdrop-filter: blur(8px);
+      }
+
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-family: var(--font-mono);
+        font-weight: 600;
+        font-size: 1.25rem;
+        color: var(--color-text);
+        text-decoration: none;
+      }
+
+      .nav-logo span {
+        font-size: 1.75rem;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+      }
+
+      .nav-links a {
+        font-family: var(--font-mono);
+        font-size: 0.875rem;
+        color: var(--color-text-muted);
+        text-decoration: none;
+        transition: color 0.2s;
+      }
+
+      .nav-links a:hover {
+        color: var(--color-accent);
+      }
+
+      /* Hero Section */
+      .hero {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 5rem 2rem 2rem;
+        text-align: center;
+      }
+
+      .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.375rem 0.75rem;
+        background: var(--color-bg-elevated);
+        border: 1px solid var(--color-border);
+        border-radius: 100px;
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        color: var(--color-text-muted);
+        margin-bottom: 1rem;
+        animation: fadeInUp 0.6s ease-out;
+      }
+
+      .hero-badge::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        background: #22c55e;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
+      .hero h1 {
+        font-family: var(--font-mono);
+        font-size: clamp(1.5rem, 3vw, 2.25rem);
+        font-weight: 600;
+        line-height: 1.2;
+        margin-bottom: 0.75rem;
+        animation: fadeInUp 0.6s ease-out 0.1s both;
+      }
+
+      .hero h1 .accent {
+        color: var(--color-accent);
+      }
+
+      .hero-subtitle {
+        font-size: clamp(0.875rem, 1.5vw, 1rem);
+        color: var(--color-text-muted);
+        max-width: 480px;
+        margin-bottom: 1.5rem;
+        line-height: 1.5;
+        animation: fadeInUp 0.6s ease-out 0.2s both;
+      }
+
+      .hero-buttons {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        animation: fadeInUp 0.6s ease-out 0.3s both;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.875rem 1.75rem;
+        font-family: var(--font-mono);
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+        border-radius: 8px;
+        transition: all 0.2s;
+      }
+
+      .btn-primary {
+        background: var(--color-accent);
+        color: #fff;
+        border: none;
+        box-shadow: 0 0 20px var(--color-accent-glow);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 30px var(--color-accent-glow), 0 10px 30px -10px var(--color-accent-glow);
+      }
+
+      .btn-secondary {
+        background: transparent;
+        color: var(--color-text);
+        border: 1px solid var(--color-border);
+      }
+
+      .btn-secondary:hover {
+        border-color: var(--color-text-muted);
+        background: var(--color-bg-elevated);
+      }
+
+      /* TUI Screenshot */
+      .tui-container {
+        position: relative;
+        margin-top: 2rem;
+        width: 100%;
+        max-width: 1100px;
+        animation: fadeInUp 0.8s ease-out 0.4s both;
+      }
+
+      .tui-window {
+        position: relative;
+        background: #1e1e2e;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.1),
+          0 25px 50px -12px rgba(0, 0, 0, 0.5),
+          0 0 80px var(--color-accent-glow);
+        margin: 0 auto;
+      }
+
+      .tui-titlebar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        background: #16161e;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .tui-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+
+      .tui-dot.red { background: #ff5f56; }
+      .tui-dot.yellow { background: #ffbd2e; }
+      .tui-dot.green { background: #27c93f; }
+
+      .tui-title {
+        flex: 1;
+        text-align: center;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-right: 52px;
+      }
+
+      .tui-window img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      /* Scan line effect */
+      .tui-scanlines {
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.03) 2px,
+          rgba(0, 0, 0, 0.03) 4px
+        );
+        pointer-events: none;
+        border-radius: 12px;
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Benefits Section */
+      .benefits {
+        position: relative;
+        z-index: 1;
+        padding: 3rem 2rem;
+      }
+
+      .section-header {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+
+      .section-header h2 {
+        font-family: var(--font-mono);
+        font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+
+      .section-header p {
+        color: var(--color-text-muted);
+        font-size: 0.9rem;
+        max-width: 400px;
+        margin: 0 auto;
+      }
+
+      .benefits-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      @media (max-width: 900px) {
+        .benefits-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (max-width: 500px) {
+        .benefits-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .benefit-card {
+        background: var(--color-bg-elevated);
+        border: 1px solid var(--color-border);
+        border-radius: 10px;
+        padding: 1.25rem;
+        transition: all 0.2s;
+      }
+
+      .benefit-card:hover {
+        border-color: var(--color-accent);
+      }
+
+      .benefit-icon {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--color-accent), #8b5cf6);
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        font-size: 1.125rem;
+      }
+
+      .benefit-card h3 {
+        font-family: var(--font-mono);
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 0.375rem;
+      }
+
+      .benefit-card p {
+        color: var(--color-text-muted);
+        font-size: 0.8rem;
+        line-height: 1.5;
+      }
+
+      /* Features Section */
+      .features {
+        position: relative;
+        z-index: 1;
+        padding: 2rem 2rem 3rem;
+      }
+
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      @media (max-width: 700px) {
+        .features-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 0.875rem;
+        background: var(--color-bg-elevated);
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        transition: border-color 0.2s;
+      }
+
+      .feature-item:hover {
+        border-color: var(--color-accent);
+      }
+
+      .feature-item::before {
+        content: '✓';
+        color: var(--color-accent);
+        font-weight: 600;
+      }
+
+      /* CTA Section */
+      .cta {
+        position: relative;
+        z-index: 1;
+        padding: 3rem 2rem;
+        text-align: center;
+        background: var(--color-bg-elevated);
+        border-top: 1px solid var(--color-border);
+      }
+
+      .cta h2 {
+        font-family: var(--font-mono);
+        font-size: clamp(1rem, 2vw, 1.25rem);
+        margin-bottom: 0.5rem;
+      }
+
+      .cta p {
+        color: var(--color-text-muted);
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
+      }
+
+      .cta-code {
+        display: inline-block;
+        background: var(--color-bg);
+        border: 1px solid var(--color-border);
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--color-accent);
+        margin-bottom: 1.5rem;
+      }
+
+      /* Footer */
+      footer {
+        position: relative;
+        z-index: 1;
+        padding: 2rem;
+        text-align: center;
+        border-top: 1px solid var(--color-border);
+      }
+
+      footer p {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+      }
+
+      footer a {
+        color: var(--color-accent);
+        text-decoration: none;
+      }
+
+      footer a:hover {
+        text-decoration: underline;
+      }
+
+      /* Mobile */
+      @media (max-width: 640px) {
+        nav {
+          padding: 1rem;
+        }
+
+        .nav-links {
+          gap: 1rem;
+        }
+
+        .hero {
+          padding: 6rem 1rem 2rem;
+        }
+
+        .tui-container {
+          margin: 2rem -1rem 0;
+        }
+
+        .tui-window {
+          border-radius: 0;
+        }
+
+        .benefits, .features {
+          padding: 4rem 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
+    <nav>
+      <a href="/" class="nav-logo">
+        <span>⚓</span>
+        Bearing
+      </a>
+      <div class="nav-links">
+        <a href="/docs/">Docs</a>
+        <a href="https://github.com/joshribakoff/bearing" target="_blank" rel="noopener">GitHub</a>
+        <ThemeToggle />
+      </div>
+    </nav>
+
+    <section class="hero">
+      <div class="hero-badge">Works with Claude Code</div>
+      <h1>One conversation.<br/><span class="accent">Full control.</span></h1>
+      <p class="hero-subtitle">
+        Tooling for the <a href="https://workforest.space" style="color: var(--color-accent);">Work Forest</a> pattern.
+        Manage parallel AI workstreams with worktree isolation and file-based state.
+      </p>
+      <div class="hero-buttons">
+        <a href="/docs/" class="btn btn-primary">
+          Get Started
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14m-7-7l7 7-7 7"/>
+          </svg>
+        </a>
+        <a href="https://github.com/joshribakoff/bearing" class="btn btn-secondary" target="_blank" rel="noopener">
+          View on GitHub
+        </a>
+      </div>
+
+      <div class="tui-container">
+        <div class="tui-window">
+          <div class="tui-titlebar">
+            <div class="tui-dot red"></div>
+            <div class="tui-dot yellow"></div>
+            <div class="tui-dot green"></div>
+            <div class="tui-title">bearing-tui</div>
+          </div>
+          <img src="/images/tui-screenshot.svg" alt="Bearing Terminal UI showing project list, worktrees, and details panel" />
+          <div class="tui-scanlines"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="benefits">
+      <div class="section-header">
+        <h2>Why Bearing?</h2>
+        <p>Parallelism without the pain. AI assistance without the chaos.</p>
+      </div>
+      <div class="benefits-grid">
+        <div class="benefit-card">
+          <div class="benefit-icon">🔀</div>
+          <h3>No Contention</h3>
+          <p>Background agents work in isolated git worktrees. No merge conflicts in real-time. Integrate when you're ready.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">📁</div>
+          <h3>No Context Bloat</h3>
+          <p>State lives in JSONL files, not your conversation. Keep your context clean. Query state with simple tools.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">👁️</div>
+          <h3>Full Visibility</h3>
+          <p>See all active work in one TUI. PR status, health checks, dirty files. Everything at a glance.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon">🎮</div>
+          <h3>You're In Control</h3>
+          <p>Parallelism is opt-in. You decide when to spawn agents, what to background. No runaway swarms.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="features">
+      <div class="section-header">
+        <h2>Built for developers</h2>
+      </div>
+      <div class="features-grid">
+        <div class="feature-item">Vim-style keybindings</div>
+        <div class="feature-item">PR status monitoring</div>
+        <div class="feature-item">JSONL state files</div>
+        <div class="feature-item">Health checks</div>
+        <div class="feature-item">Session persistence</div>
+        <div class="feature-item">Plan tracking</div>
+        <div class="feature-item">Claude Code ready</div>
+        <div class="feature-item">No databases</div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <h2>Ready to try it?</h2>
+      <p>Clone, install, and start vibing with Claude.</p>
+      <div class="cta-code">
+        git clone https://github.com/joshribakoff/bearing && ./install.sh
+      </div>
+      <div>
+        <a href="/docs/" class="btn btn-primary">Read the Docs</a>
+      </div>
+    </section>
+
+    <footer>
+      <p>
+        Built by <a href="https://joshribakoff.com" target="_blank" rel="noopener">Josh Ribakoff</a> •
+        <a href="https://github.com/joshribakoff/bearing" target="_blank" rel="noopener">GitHub</a> •
+        <a href="https://workforest.space" target="_blank" rel="noopener">Work Forest</a> •
+        <a href="/llms.txt">llms.txt</a>
+      </p>
+    </footer>
+  </body>
+</html>

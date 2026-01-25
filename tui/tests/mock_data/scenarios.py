@@ -23,27 +23,27 @@ def create_normal_workspace() -> Path:
     workspace = Path(tempfile.mkdtemp(prefix="bearing_normal_"))
 
     local_entries = [
-        # sailkit: base + 2 features
+        # sailkit: base + 2 features (with plan/issue links)
         {"folder": "sailkit", "repo": "sailkit", "branch": "main", "base": True},
-        {"folder": "sailkit-compass-refactor", "repo": "sailkit", "branch": "compass-refactor", "base": False},
-        {"folder": "sailkit-add-lantern-themes", "repo": "sailkit", "branch": "add-lantern-themes", "base": False},
-        # bearing: base + 2 features
+        {"folder": "sailkit-compass-refactor", "repo": "sailkit", "branch": "compass-refactor", "base": False, "plan": "a3f2c", "issue": "15"},
+        {"folder": "sailkit-add-lantern-themes", "repo": "sailkit", "branch": "add-lantern-themes", "base": False, "plan": "b7d1e", "issue": "22"},
+        # bearing: base + 2 features (showcase all PR states)
         {"folder": "bearing", "repo": "bearing", "branch": "main", "base": True},
-        {"folder": "bearing-tui-improvements", "repo": "bearing", "branch": "tui-improvements", "base": False},
-        {"folder": "bearing-health-checks", "repo": "bearing", "branch": "health-checks", "base": False},
+        {"folder": "bearing-tui-improvements", "repo": "bearing", "branch": "tui-improvements", "base": False, "plan": "017", "issue": "40"},
+        {"folder": "bearing-health-checks", "repo": "bearing", "branch": "health-checks", "base": False, "plan": "006", "issue": "32"},
         # fightingwithai: base + 1 feature
         {"folder": "fightingwithai.com", "repo": "fightingwithai.com", "branch": "main", "base": True},
-        {"folder": "fightingwithai.com-vim-mode", "repo": "fightingwithai.com", "branch": "vim-mode", "base": False},
-        # surfdeeper: base + 3 features
+        {"folder": "fightingwithai.com-vim-mode", "repo": "fightingwithai.com", "branch": "vim-mode", "base": False, "issue": "8"},
+        # surfdeeper: base + 3 features (mixed states)
         {"folder": "surfdeeper", "repo": "surfdeeper", "branch": "main", "base": True},
-        {"folder": "surfdeeper-wave-forecast", "repo": "surfdeeper", "branch": "wave-forecast", "base": False},
+        {"folder": "surfdeeper-wave-forecast", "repo": "surfdeeper", "branch": "wave-forecast", "base": False, "plan": "c9a4b"},
         {"folder": "surfdeeper-spot-search", "repo": "surfdeeper", "branch": "spot-search", "base": False},
-        {"folder": "surfdeeper-tide-charts", "repo": "surfdeeper", "branch": "tide-charts", "base": False},
+        {"folder": "surfdeeper-tide-charts", "repo": "surfdeeper", "branch": "tide-charts", "base": False, "issue": "45"},
         # portfolio: base only
         {"folder": "portfolio", "repo": "portfolio", "branch": "main", "base": True},
         # api-server: base + 1 feature
         {"folder": "api-server", "repo": "api-server", "branch": "main", "base": True},
-        {"folder": "api-server-auth-refactor", "repo": "api-server", "branch": "auth-refactor", "base": False},
+        {"folder": "api-server-auth-refactor", "repo": "api-server", "branch": "auth-refactor", "base": False, "plan": "d8e7f", "issue": "101"},
     ]
 
     workflow_entries = [
@@ -59,27 +59,27 @@ def create_normal_workspace() -> Path:
     ]
 
     health_entries = [
-        # sailkit
+        # sailkit - showcase DRAFT and OPEN
         {"folder": "sailkit", "dirty": False, "unpushed": 0, "prState": None},
-        {"folder": "sailkit-compass-refactor", "dirty": True, "unpushed": 3, "prState": "draft"},
-        {"folder": "sailkit-add-lantern-themes", "dirty": False, "unpushed": 0, "prState": "open"},
-        # bearing
+        {"folder": "sailkit-compass-refactor", "dirty": True, "unpushed": 3, "prState": "DRAFT", "prTitle": "Refactor compass for tree-shaking"},
+        {"folder": "sailkit-add-lantern-themes", "dirty": False, "unpushed": 0, "prState": "OPEN", "prTitle": "Add dark/light theme support"},
+        # bearing - showcase OPEN, MERGED, and CLOSED
         {"folder": "bearing", "dirty": False, "unpushed": 0, "prState": None},
-        {"folder": "bearing-tui-improvements", "dirty": True, "unpushed": 5, "prState": "open"},
-        {"folder": "bearing-health-checks", "dirty": False, "unpushed": 0, "prState": "merged"},
-        # fightingwithai
+        {"folder": "bearing-tui-improvements", "dirty": True, "unpushed": 5, "prState": "OPEN", "prTitle": "TUI: Improve navigation and focus"},
+        {"folder": "bearing-health-checks", "dirty": False, "unpushed": 0, "prState": "MERGED", "prTitle": "Add worktree health monitoring"},
+        # fightingwithai - OPEN PR
         {"folder": "fightingwithai.com", "dirty": False, "unpushed": 0, "prState": None},
-        {"folder": "fightingwithai.com-vim-mode", "dirty": False, "unpushed": 1, "prState": "open"},
-        # surfdeeper
+        {"folder": "fightingwithai.com-vim-mode", "dirty": False, "unpushed": 1, "prState": "OPEN", "prTitle": "Implement vim-style navigation"},
+        # surfdeeper - mix including CLOSED
         {"folder": "surfdeeper", "dirty": True, "unpushed": 0, "prState": None},
-        {"folder": "surfdeeper-wave-forecast", "dirty": True, "unpushed": 2, "prState": "draft"},
-        {"folder": "surfdeeper-spot-search", "dirty": False, "unpushed": 0, "prState": None},
+        {"folder": "surfdeeper-wave-forecast", "dirty": True, "unpushed": 2, "prState": "DRAFT", "prTitle": "Integrate NOAA wave forecast"},
+        {"folder": "surfdeeper-spot-search", "dirty": False, "unpushed": 0, "prState": "CLOSED", "prTitle": "Add fuzzy spot search"},
         {"folder": "surfdeeper-tide-charts", "dirty": True, "unpushed": 1, "prState": None},
         # portfolio
         {"folder": "portfolio", "dirty": False, "unpushed": 0, "prState": None},
-        # api-server
+        # api-server - OPEN PR with lots of unpushed
         {"folder": "api-server", "dirty": False, "unpushed": 0, "prState": None},
-        {"folder": "api-server-auth-refactor", "dirty": True, "unpushed": 8, "prState": "open"},
+        {"folder": "api-server-auth-refactor", "dirty": True, "unpushed": 8, "prState": "OPEN", "prTitle": "Migrate to session-based auth"},
     ]
 
     _write_jsonl(workspace / "local.jsonl", local_entries)
@@ -155,7 +155,7 @@ def create_overflow_workspace() -> Path:
                 "folder": folder,
                 "dirty": (i + j) % 3 == 0,
                 "unpushed": (i + j) % 5,
-                "prState": [None, "draft", "open", "merged"][(i + j) % 4],
+                "prState": [None, "DRAFT", "OPEN", "MERGED"][(i + j) % 4],
             })
 
     _write_jsonl(workspace / "local.jsonl", local_entries)
@@ -232,7 +232,7 @@ def create_long_names_workspace() -> Path:
                 "folder": folder,
                 "dirty": True,
                 "unpushed": 99,  # High number to test display
-                "prState": "open",
+                "prState": "OPEN",
             })
 
     _write_jsonl(workspace / "local.jsonl", local_entries)
@@ -270,7 +270,7 @@ def create_single_workspace() -> Path:
 
     health_entries = [
         {"folder": "solo-project", "dirty": False, "unpushed": 0, "prState": None},
-        {"folder": "solo-project-first-feature", "dirty": True, "unpushed": 1, "prState": "draft"},
+        {"folder": "solo-project-first-feature", "dirty": True, "unpushed": 1, "prState": "DRAFT"},
     ]
 
     _write_jsonl(workspace / "local.jsonl", local_entries)

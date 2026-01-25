@@ -41,6 +41,7 @@ type worktreeStatus struct {
 	Dirty     bool      `json:"dirty"`
 	Unpushed  int       `json:"unpushed"`
 	PRState   *string   `json:"prState,omitempty"`
+	PRTitle   *string   `json:"prTitle,omitempty"`
 	LastCheck time.Time `json:"lastCheck,omitempty"`
 }
 
@@ -76,6 +77,7 @@ func runWorktreeStatus(cmd *cobra.Command, args []string) error {
 			s.Dirty = cached.Dirty
 			s.Unpushed = cached.Unpushed
 			s.PRState = cached.PRState
+			s.PRTitle = cached.PRTitle
 			s.LastCheck = cached.LastCheck
 			statuses = append(statuses, s)
 			continue
@@ -99,6 +101,7 @@ func runWorktreeStatus(cmd *cobra.Command, args []string) error {
 				ghClient := gh.NewClient(folderPath)
 				if pr, _ := ghClient.GetPR(e.Branch); pr != nil {
 					s.PRState = &pr.State
+					s.PRTitle = &pr.Title
 				}
 			}
 			s.LastCheck = time.Now()
@@ -109,6 +112,7 @@ func runWorktreeStatus(cmd *cobra.Command, args []string) error {
 				Dirty:     s.Dirty,
 				Unpushed:  s.Unpushed,
 				PRState:   s.PRState,
+				PRTitle:   s.PRTitle,
 				LastCheck: s.LastCheck,
 			})
 		}

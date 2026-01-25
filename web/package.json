@@ -1,0 +1,18 @@
+{
+  "name": "bearing-web-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:unit": "node tests/unit.test.js",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:visual": "playwright test tests/visual/",
+    "test:visual:update": "playwright test tests/visual/ --update-snapshots",
+    "screenshot": "node scripts/generate_screenshots.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "playwright": "^1.40.0"
+  }
+}

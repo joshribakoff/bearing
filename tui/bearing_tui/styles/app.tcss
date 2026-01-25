@@ -31,7 +31,6 @@ Screen {
 
 /* Title bar */
 #title {
-    dock: top;
     width: 100%;
     height: 1;
     background: $bg-surface;
@@ -86,7 +85,6 @@ Screen {
 
 /* Footer with keybindings */
 #footer-bar {
-    dock: bottom;
     width: 100%;
     height: 1;
     background: $bg-surface;

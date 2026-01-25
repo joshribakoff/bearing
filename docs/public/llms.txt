@@ -1,0 +1,20 @@
+# Bearing
+
+> Git worktree and plan management tooling for parallel AI-assisted development. Implements the Work Forest pattern.
+
+## What It Is
+
+- **Go Daemon**: Background service watching worktrees, syncing PR status, running health checks
+- **Terminal UI**: Python TUI to visualize worktrees and plans with Vim keybindings
+- **Claude Code Hooks**: Pre-built hooks for worktree management and plan tracking
+- **Plan Management**: File-based plans with unique IDs that survive session resets
+
+## Docs
+
+- [Home](https://bearing.dev/): Overview and quick start
+- [Documentation](https://bearing.dev/docs/): Full documentation
+
+## Related
+
+- [Work Forest](https://workforest.space): The pattern Bearing implements
+- [GitHub](https://github.com/joshribakoff/bearing)

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bearing Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="tab-bar">
+    <button class="tab active" data-view="worktrees">Worktrees</button>
+    <button class="tab" data-view="issues">Issues</button>
+    <button class="tab" data-view="prs">PRs</button>
+  </nav>
+
+  <main id="main-container">
+    <aside id="projects-panel" class="panel">
+      <div class="panel-header">[0] Projects</div>
+      <ul id="project-list" class="list" tabindex="0"></ul>
+    </aside>
+
+    <section id="worktrees-panel" class="panel">
+      <div class="panel-header">[1] Worktrees</div>
+      <div id="worktree-table" class="table" tabindex="0">
+        <div class="table-header">
+          <span class="col-folder sortable" data-sort="folder">Folder</span>
+          <span class="col-branch sortable" data-sort="branch">Branch</span>
+          <span class="col-status sortable" data-sort="status">Status</span>
+          <span class="col-pr sortable" data-sort="pr">PR</span>
+        </div>
+        <div id="worktree-rows" class="table-body"></div>
+      </div>
+    </section>
+  </main>
+
+  <section id="details-section">
+    <div class="panel-header details-header">[2] Details</div>
+    <div id="details-panel" class="panel" tabindex="0">
+      <div id="details-content">Select a worktree to view details</div>
+    </div>
+  </section>
+
+  <footer id="footer-bar">
+    <span><kbd>1</kbd>-<kbd>3</kbd> views</span>
+    <span><kbd>Tab</kbd> cycle</span>
+    <span><kbd>j/k</kbd> nav</span>
+    <span><kbd>r</kbd>efresh</span>
+    <span><kbd>o</kbd>pen PR</span>
+    <span><kbd>p</kbd>lans</span>
+    <span><kbd>/</kbd> search</span>
+    <span><kbd>?</kbd> help</span>
+    <span class="footer-spacer"></span>
+    <span id="status-indicator" class="status-ok" title="Connected"></span>
+  </footer>
+
+  <!-- Help Modal -->
+  <div id="help-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2>Bearing Dashboard - Keybindings</h2>
+      <div class="keybindings">
+        <h3>Navigation</h3>
+        <div class="binding"><kbd>1</kbd> Worktrees view</div>
+        <div class="binding"><kbd>2</kbd> Issues view</div>
+        <div class="binding"><kbd>3</kbd> PRs view</div>
+        <div class="binding"><kbd>h</kbd> / <kbd>←</kbd> Focus left panel</div>
+        <div class="binding"><kbd>l</kbd> / <kbd>→</kbd> Focus right panel</div>
+        <div class="binding"><kbd>j</kbd> / <kbd>↓</kbd> Move down</div>
+        <div class="binding"><kbd>k</kbd> / <kbd>↑</kbd> Move up</div>
+        <div class="binding"><kbd>Tab</kbd> Cycle views</div>
+        <div class="binding"><kbd>Enter</kbd> Select item</div>
+
+        <h3>Actions</h3>
+        <div class="binding"><kbd>r</kbd> Refresh data</div>
+        <div class="binding"><kbd>o</kbd> Open PR in browser</div>
+        <div class="binding"><kbd>p</kbd> View plans</div>
+        <div class="binding"><kbd>/</kbd> or <kbd>Ctrl+K</kbd> Command palette</div>
+        <div class="binding"><kbd>?</kbd> Show this help</div>
+        <div class="binding"><kbd>Esc</kbd> Close modal</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Plans Modal -->
+  <div id="plans-modal" class="modal hidden">
+    <div class="modal-content modal-wide">
+      <h2>Plans <span class="modal-hint">(press o to open issue, Esc to close)</span></h2>
+      <div id="plans-list" class="list" tabindex="0"></div>
+    </div>
+  </div>
+
+  <!-- Command Palette Modal -->
+  <div id="command-palette" class="modal hidden">
+    <div class="modal-content command-palette-content">
+      <input type="text" id="palette-input" placeholder="Search projects, worktrees, plans..." autocomplete="off">
+      <div id="palette-results" class="palette-results"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

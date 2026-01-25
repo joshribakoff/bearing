@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/joshribakoff/bearing/internal/daemon"
@@ -51,11 +52,25 @@ func init() {
 }
 
 func newDaemon() *daemon.Daemon {
-	return daemon.New(daemon.Config{
+	// Find web directory - try next to binary first, then relative to bearing dir
+	exe, _ := os.Executable()
+	webDir := filepath.Join(filepath.Dir(exe), "web")
+
+	if _, err := os.Stat(webDir); os.IsNotExist(err) {
+		webDir = filepath.Join(BearingDir(), "..", "web")
+	}
+
+	config := daemon.Config{
 		WorkspaceDir: WorkspaceDir(),
 		BearingDir:   BearingDir(),
 		Interval:     time.Duration(daemonInterval) * time.Second,
-	})
+	}
+
+	if info, err := os.Stat(webDir); err == nil && info.IsDir() {
+		config.StaticFS = os.DirFS(webDir)
+	}
+
+	return daemon.New(config)
 }
 
 func runDaemonStart(cmd *cobra.Command, args []string) error {

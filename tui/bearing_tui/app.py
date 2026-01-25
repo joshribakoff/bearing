@@ -553,17 +553,7 @@ class BearingApp(App):
         """Update worktree table for selected project."""
         worktrees = self.state.get_worktrees_for_project(project)
 
-        wt_entries = []
-        for w in worktrees:
-            workflow = self.state.get_workflow_for_branch(w.repo, w.branch)
-            wt_entries.append(WorktreeEntry(
-                folder=w.folder,
-                repo=w.repo,
-                branch=w.branch,
-                base=w.base,
-                purpose=workflow.purpose if workflow else None,
-            ))
-
+        # Build health map first (needed for sorting)
         health_map = {}
         for w in worktrees:
             health = self.state.get_health_for_folder(w.folder)
@@ -573,7 +563,43 @@ class BearingApp(App):
                     dirty=health.dirty,
                     unpushed=health.unpushed,
                     pr_state=health.pr_state,
+                    pr_title=health.pr_title,
                 )
+
+        # Build workflow map for created dates (needed for sorting)
+        workflow_map = {}
+        for w in worktrees:
+            wf = self.state.get_workflow_for_branch(w.repo, w.branch)
+            if wf and wf.created:
+                workflow_map[w.folder] = wf.created
+
+        # Build entries
+        wt_entries = []
+        for w in worktrees:
+            wt_entries.append(WorktreeEntry(
+                folder=w.folder,
+                repo=w.repo,
+                branch=w.branch,
+                base=w.base,
+            ))
+
+        # Sort: Open PRs first, then Draft, then others, base worktrees last
+        def sort_key(entry: WorktreeEntry) -> tuple:
+            health = health_map.get(entry.folder)
+            pr_state = health.pr_state if health else None
+            created = workflow_map.get(entry.folder)
+            created_sort = -created.timestamp() if created else 0
+            if entry.base:
+                return (4, created_sort, entry.branch)
+            if pr_state == "OPEN":
+                return (0, created_sort, entry.branch)
+            if pr_state == "DRAFT":
+                return (1, created_sort, entry.branch)
+            if pr_state:
+                return (2, created_sort, entry.branch)
+            return (3, created_sort, entry.branch)
+
+        wt_entries.sort(key=sort_key)
 
         worktree_table = self.query_one(WorktreeTable)
         worktree_table.set_worktrees(wt_entries, health_map)

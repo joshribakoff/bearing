@@ -65,22 +65,28 @@ func runPlanPush(cmd *cobra.Command, args []string) error {
 	// Trim leading/trailing whitespace from body
 	body = strings.TrimSpace(body)
 
-	repoPath := GetRepoPath(fm.Repo)
+	// Resolve full repo name (owner/repo) for gh CLI
+	fullRepo := LookupGitHubRepo(fm.Repo)
+	if fullRepo == "" {
+		// Fallback: assume owner/repo format already provided or use default owner
+		fullRepo = "joshribakoff/" + fm.Repo
+		fmt.Printf("Warning: repo %q not in projects.jsonl, assuming %s\n", fm.Repo, fullRepo)
+	}
 
 	if fm.Issue == "" {
 		// Create new issue
 		if planPushDryRun {
-			fmt.Printf("Would create issue in %s:\n", fm.Repo)
+			fmt.Printf("Would create issue in %s:\n", fullRepo)
 			fmt.Printf("Title: %s\n", fm.Title)
 			fmt.Printf("Body:\n%s\n", body)
 			return nil
 		}
 
 		ghCmd := exec.Command("gh", "issue", "create",
+			"--repo", fullRepo,
 			"--title", fm.Title,
 			"--body", body,
 			"--label", "plan")
-		ghCmd.Dir = repoPath
 		var stdout, stderr bytes.Buffer
 		ghCmd.Stdout = &stdout
 		ghCmd.Stderr = &stderr
@@ -106,14 +112,15 @@ func runPlanPush(cmd *cobra.Command, args []string) error {
 
 	// Update existing issue
 	if planPushDryRun {
-		fmt.Printf("Would update issue %s in %s:\n", fm.Issue, fm.Repo)
+		fmt.Printf("Would update issue %s in %s:\n", fm.Issue, fullRepo)
 		fmt.Printf("Status: %s\n", fm.Status)
 		fmt.Printf("Body:\n%s\n", body)
 		return nil
 	}
 
-	ghCmd := exec.Command("gh", "issue", "edit", fm.Issue, "--body", body)
-	ghCmd.Dir = repoPath
+	ghCmd := exec.Command("gh", "issue", "edit", fm.Issue,
+		"--repo", fullRepo,
+		"--body", body)
 	var stderr bytes.Buffer
 	ghCmd.Stderr = &stderr
 
