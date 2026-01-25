@@ -1,6 +1,6 @@
 """Tests for critical keybindings that must always work."""
 import pytest
-from bearing_tui.app import BearingApp, HelpScreen, PlansScreen
+from bearing_tui.app import BearingApp, HelpScreen
 
 
 # =============================================================================
@@ -36,17 +36,18 @@ async def test_ctrl_c_quits_from_help_modal(workspace):
 
 
 @pytest.mark.asyncio
-async def test_ctrl_c_quits_from_plans_modal(workspace):
-    """Ctrl+C must quit from plans modal."""
+async def test_ctrl_c_quits_from_plans_view(workspace):
+    """Ctrl+C must quit from plans view."""
+    from bearing_tui.app import ViewMode
     app = BearingApp(workspace=workspace)
     async with app.run_test() as pilot:
         await pilot.pause()
-        await pilot.press("p")  # Open plans
+        await pilot.press("p")  # Switch to plans view
         await pilot.pause()
-        assert isinstance(app.screen, PlansScreen)
+        assert app._view_mode == ViewMode.PLANS
 
         await pilot.press("ctrl+c")
-        assert app._exit is True, "Ctrl+C must quit from plans modal"
+        assert app._exit is True, "Ctrl+C must quit from plans view"
 
 
 @pytest.mark.asyncio
@@ -118,15 +119,17 @@ async def test_q_quits_from_help_modal(workspace):
 
 
 @pytest.mark.asyncio
-async def test_q_quits_from_plans_modal(workspace):
-    """q key should quit the app from plans modal."""
+async def test_q_quits_from_plans_view(workspace):
+    """q key should quit the app from plans view."""
+    from bearing_tui.app import ViewMode
     app = BearingApp(workspace=workspace)
     async with app.run_test() as pilot:
         await pilot.pause()
-        await pilot.press("p")
+        await pilot.press("p")  # Switch to plans view
         await pilot.pause()
+        assert app._view_mode == ViewMode.PLANS
         await pilot.press("q")
-        assert app._exit is True, "q must quit from plans modal"
+        assert app._exit is True, "q must quit from plans view"
 
 
 # =============================================================================
@@ -149,17 +152,20 @@ async def test_escape_closes_help_modal(workspace):
 
 
 @pytest.mark.asyncio
-async def test_escape_closes_plans_modal(workspace):
-    """Escape should close plans modal."""
+async def test_escape_in_plans_view_does_nothing(workspace):
+    """Escape does nothing in plans view (no modal to close)."""
+    from bearing_tui.app import ViewMode
     app = BearingApp(workspace=workspace)
     async with app.run_test() as pilot:
         await pilot.pause()
-        await pilot.press("p")
+        await pilot.press("p")  # Switch to plans view
         await pilot.pause()
-        assert isinstance(app.screen, PlansScreen)
+        assert app._view_mode == ViewMode.PLANS
 
         await pilot.press("escape")
         await pilot.pause()
+        # Still in plans view (escape doesn't switch views)
+        assert app._view_mode == ViewMode.PLANS
         assert len(app.screen_stack) == 1
 
 

@@ -280,6 +280,49 @@ def create_single_workspace() -> Path:
     return workspace
 
 
+def create_prs_workspace() -> Path:
+    """Create workspace with PR data for PR browser testing."""
+    workspace = Path(tempfile.mkdtemp(prefix="bearing_prs_"))
+
+    local_entries = [
+        {"folder": "acme-web", "repo": "acme-web", "branch": "main", "base": True},
+        {"folder": "acme-web-auth", "repo": "acme-web", "branch": "feature-auth", "base": False},
+        {"folder": "acme-web-checkout", "repo": "acme-web", "branch": "fix-checkout", "base": False},
+        {"folder": "acme-api", "repo": "acme-api", "branch": "main", "base": True},
+        {"folder": "acme-api-graphql", "repo": "acme-api", "branch": "graphql", "base": False},
+    ]
+
+    workflow_entries = [
+        {"repo": "acme-web", "branch": "feature-auth", "basedOn": "main", "purpose": "OAuth2 login", "status": "in_progress", "created": "2026-01-15T10:00:00Z"},
+        {"repo": "acme-web", "branch": "fix-checkout", "basedOn": "main", "purpose": "Fix cart bug", "status": "done", "created": "2026-01-18T14:30:00Z"},
+        {"repo": "acme-api", "branch": "graphql", "basedOn": "main", "purpose": "GraphQL layer", "status": "in_progress", "created": "2026-01-08T09:00:00Z"},
+    ]
+
+    health_entries = [
+        {"folder": "acme-web", "dirty": False, "unpushed": 0, "prState": None},
+        {"folder": "acme-web-auth", "dirty": True, "unpushed": 3, "prState": "OPEN"},
+        {"folder": "acme-web-checkout", "dirty": False, "unpushed": 0, "prState": "MERGED"},
+        {"folder": "acme-api", "dirty": False, "unpushed": 0, "prState": None},
+        {"folder": "acme-api-graphql", "dirty": True, "unpushed": 8, "prState": "OPEN"},
+    ]
+
+    prs_entries = [
+        {"repo": "acme-web", "number": 142, "title": "Add OAuth2 authentication flow", "state": "OPEN", "branch": "feature-auth", "baseBranch": "main", "author": "alice", "updated": "2026-01-19T18:00:00Z", "checks": "SUCCESS", "draft": False},
+        {"repo": "acme-web", "number": 138, "title": "Fix checkout cart calculation bug", "state": "MERGED", "branch": "fix-checkout", "baseBranch": "main", "author": "bob", "updated": "2026-01-19T12:00:00Z", "checks": "SUCCESS", "draft": False},
+        {"repo": "acme-web", "number": 145, "title": "Lazy load images", "state": "OPEN", "branch": "perf-images", "baseBranch": "main", "author": "alice", "updated": "2026-01-19T20:00:00Z", "checks": "PENDING", "draft": False},
+        {"repo": "acme-web", "number": 130, "title": "New design system v2", "state": "OPEN", "branch": "redesign-v2", "baseBranch": "main", "author": "carol", "updated": "2026-01-18T10:00:00Z", "checks": "FAILURE", "draft": True},
+        {"repo": "acme-api", "number": 89, "title": "Add GraphQL API layer", "state": "OPEN", "branch": "graphql", "baseBranch": "main", "author": "dave", "updated": "2026-01-19T16:00:00Z", "checks": "SUCCESS", "draft": False},
+        {"repo": "acme-api", "number": 85, "title": "Rate limiting middleware", "state": "MERGED", "branch": "rate-limit", "baseBranch": "main", "author": "eve", "updated": "2026-01-18T09:00:00Z", "checks": "SUCCESS", "draft": False},
+    ]
+
+    _write_jsonl(workspace / "local.jsonl", local_entries)
+    _write_jsonl(workspace / "workflow.jsonl", workflow_entries)
+    _write_jsonl(workspace / "health.jsonl", health_entries)
+    _write_jsonl(workspace / "prs.jsonl", prs_entries)
+
+    return workspace
+
+
 # Map scenario names to factory functions
 SCENARIOS: dict[str, Callable[[], Path]] = {
     "normal": create_normal_workspace,
@@ -287,4 +330,5 @@ SCENARIOS: dict[str, Callable[[], Path]] = {
     "overflow": create_overflow_workspace,
     "long_names": create_long_names_workspace,
     "single": create_single_workspace,
+    "prs": create_prs_workspace,
 }

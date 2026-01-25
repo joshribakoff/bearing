@@ -158,16 +158,16 @@ async def test_projects_panel_focus_border(workspace):
 
         # Get computed styles for projects panel
         projects_panel = app.query_one("#projects-panel")
-        worktrees_panel = app.query_one("#worktrees-panel")
+        main_panel = app.query_one("#main-panel")
 
         # Verify focus is on project list
         assert app.focused.id == "project-list"
 
-        # Check border colors - projects should be blue (focus), worktrees should be gray
+        # Check border colors - projects should be blue (focus), main should be gray
         # Border is a tuple of ((edge_type, color), ...) for each edge
         # We check the top border color
         projects_border = projects_panel.styles.border_top
-        worktrees_border = worktrees_panel.styles.border_top
+        main_border = main_panel.styles.border_top
 
         # The focused panel should have blue border (#007acc)
         # The unfocused panel should have gray border (#3c3c3c)
@@ -176,15 +176,15 @@ async def test_projects_panel_focus_border(workspace):
 
         # Extract border color (border_top is a tuple of (edge_type, color))
         projects_color = projects_border[1] if projects_border else None
-        worktrees_color = worktrees_border[1] if worktrees_border else None
+        main_color = main_border[1] if main_border else None
 
         assert projects_color == blue_focus, f"Projects panel should have blue border when focused, got {projects_color}"
-        assert worktrees_color == gray_border, f"Worktrees panel should have gray border when not focused, got {worktrees_color}"
+        assert main_color == gray_border, f"Main panel should have gray border when not focused, got {main_color}"
 
 
 @pytest.mark.asyncio
-async def test_worktrees_panel_focus_border(workspace):
-    """Test that worktrees panel gets blue border when focused."""
+async def test_main_panel_focus_border(workspace):
+    """Test that main panel gets blue border when focused."""
     from textual.color import Color
 
     app = BearingApp(workspace=workspace)
@@ -195,23 +195,23 @@ async def test_worktrees_panel_focus_border(workspace):
 
         # Get computed styles for both panels
         projects_panel = app.query_one("#projects-panel")
-        worktrees_panel = app.query_one("#worktrees-panel")
+        main_panel = app.query_one("#main-panel")
 
         # Verify focus is on worktree table
         assert app.focused.id == "worktree-table"
 
         # Check border colors
         projects_border = projects_panel.styles.border_top
-        worktrees_border = worktrees_panel.styles.border_top
+        main_border = main_panel.styles.border_top
 
         blue_focus = Color.parse("#007acc")
         gray_border = Color.parse("#3c3c3c")
 
         projects_color = projects_border[1] if projects_border else None
-        worktrees_color = worktrees_border[1] if worktrees_border else None
+        main_color = main_border[1] if main_border else None
 
         assert projects_color == gray_border, f"Projects panel should have gray border when not focused, got {projects_color}"
-        assert worktrees_color == blue_focus, f"Worktrees panel should have blue border when focused, got {worktrees_color}"
+        assert main_color == blue_focus, f"Main panel should have blue border when focused, got {main_color}"
 
 
 @pytest.mark.asyncio
@@ -268,3 +268,130 @@ async def test_project_list_item_highlight_unfocused(workspace):
         # When unfocused, should have selection blue (#264f78)
         selection_blue = Color.parse("#264f78")
         assert bg == selection_blue, f"Highlighted item should retain blue background when unfocused, got {bg}"
+
+
+@pytest.mark.asyncio
+async def test_view_switching_to_plans(workspace):
+    """Test that 'p' key switches to plans view."""
+    from bearing_tui.app import ViewMode
+    from bearing_tui.widgets import PlansTable
+
+    # Create plans directory with a sample plan
+    plans_dir = workspace / "plans" / "myapp"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "001-test-plan.md").write_text("""---
+status: draft
+issue: 1
+---
+# Test Plan
+Some content
+""")
+
+    app = BearingApp(workspace=workspace)
+    async with app.run_test() as pilot:
+        # Should start in worktrees view
+        assert app._view_mode == ViewMode.WORKTREES
+
+        # WorktreeTable should be visible, PlansTable hidden
+        worktree_table = app.query_one("#worktree-table")
+        plans_table = app.query_one("#plans-table")
+        assert worktree_table.display is True
+        assert plans_table.display is False
+
+        # Press 'p' to switch to plans
+        await pilot.press("p")
+        await pilot.pause()
+
+        # Should now be in plans view
+        assert app._view_mode == ViewMode.PLANS
+
+        # PlansTable should be visible, WorktreeTable hidden
+        assert worktree_table.display is False
+        assert plans_table.display is True
+
+
+@pytest.mark.asyncio
+async def test_view_switching_to_worktrees(workspace):
+    """Test that 'w' key switches back to worktrees view."""
+    from bearing_tui.app import ViewMode
+
+    # Create plans directory
+    plans_dir = workspace / "plans" / "myapp"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "001-test-plan.md").write_text("# Test\n")
+
+    app = BearingApp(workspace=workspace)
+    async with app.run_test() as pilot:
+        # Switch to plans first
+        await pilot.press("p")
+        await pilot.pause()
+        assert app._view_mode == ViewMode.PLANS
+
+        # Press 'w' to switch back to worktrees
+        await pilot.press("w")
+        await pilot.pause()
+
+        # Should be back in worktrees view
+        assert app._view_mode == ViewMode.WORKTREES
+
+        worktree_table = app.query_one("#worktree-table")
+        plans_table = app.query_one("#plans-table")
+        assert worktree_table.display is True
+        assert plans_table.display is False
+
+
+@pytest.mark.asyncio
+async def test_view_switch_preserves_project_selection(workspace):
+    """Test that project selection AND focus persist when switching views."""
+    from bearing_tui.app import ViewMode
+    from bearing_tui.widgets import PlansTable
+
+    # Create plans directory
+    plans_dir = workspace / "plans" / "myapp"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "001-test-plan.md").write_text("# Test\n")
+
+    app = BearingApp(workspace=workspace)
+    async with app.run_test() as pilot:
+        # Select a project (this auto-focuses worktree table)
+        await pilot.press("j")  # Move to first project
+        await pilot.press("enter")
+        await pilot.pause()
+
+        # Verify project is selected and worktree table is focused
+        assert app._current_project is not None
+        selected_project = app._current_project
+        assert app.focused.id == "worktree-table"
+
+        # Switch to plans view
+        await pilot.press("p")
+        await pilot.pause()
+
+        # Project selection should persist
+        assert app._current_project == selected_project
+        assert app._view_mode == ViewMode.PLANS
+        # Focus should be on plans table (panel 1), NOT project list (panel 0)
+        assert app.focused.id == "plans-table"
+
+        # Switch back to worktrees
+        await pilot.press("w")
+        await pilot.pause()
+
+        # Project selection should still persist
+        assert app._current_project == selected_project
+        assert app._view_mode == ViewMode.WORKTREES
+        # Focus should be on worktree table (panel 1)
+        assert app.focused.id == "worktree-table"
+
+
+@pytest.mark.asyncio
+async def test_footer_widget_exists(workspace):
+    """Test that footer widget is present."""
+    from textual.widgets import Footer
+
+    app = BearingApp(workspace=workspace)
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        footer = app.query_one(Footer)
+        assert footer is not None
+        assert footer.display is True

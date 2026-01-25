@@ -191,6 +191,31 @@ async def test_panel_0_to_1_selection(workspace):
         assert worktree_table.row_count > 0
 
 
+@pytest.mark.asyncio
+async def test_project_selection_auto_focuses_worktrees(workspace):
+    """Test that selecting a project automatically focuses the worktree panel."""
+    app = BearingApp(workspace=workspace)
+    async with app.run_test(size=(100, 25)) as pilot:
+        await pilot.pause()
+
+        # Start on project list
+        await pilot.press("0")
+        await pilot.pause()
+        assert app.focused.id == "project-list"
+
+        # Select a project with Enter
+        await pilot.press("j")
+        await pilot.press("enter")
+        await pilot.pause()
+
+        # Should AUTO-focus worktree table (no manual "1" press needed)
+        assert app.focused.id == "worktree-table"
+
+        # And worktrees should be populated
+        worktree_table = app.query_one(WorktreeTable)
+        assert worktree_table.row_count > 0
+
+
 # ============================================================================
 # Empty States
 # ============================================================================

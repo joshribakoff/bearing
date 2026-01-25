@@ -4,6 +4,7 @@ import os
 import subprocess
 import webbrowser
 from datetime import datetime, timedelta
+from enum import Enum
 from pathlib import Path
 
 from textual.app import App, ComposeResult
@@ -22,8 +23,18 @@ from bearing_tui.widgets import (
     LocalEntry,
     WorkflowEntry,
     PlansList,
+    PlansTable,
+    PlanEntry,
     load_plans,
+    PRsTable,
+    PRDisplayEntry,
 )
+
+
+class ViewMode(Enum):
+    """Current view mode."""
+    WORKTREES = "worktrees"
+    PLANS = "plans"
 
 
 class HelpScreen(ModalScreen):
@@ -40,9 +51,12 @@ class HelpScreen(ModalScreen):
         yield Container(
             Static(
                 "[b cyan]Bearing TUI - Keybindings[/]\n\n"
+                "[b]Views[/]\n"
+                "  [yellow]w[/]      Switch to worktrees view\n"
+                "  [yellow]p[/]      Switch to plans view\n\n"
                 "[b]Navigation[/]\n"
                 "  [yellow]0[/]      Focus projects panel\n"
-                "  [yellow]1[/]      Focus worktrees panel\n"
+                "  [yellow]1[/]      Focus main panel\n"
                 "  [yellow]2[/]      Focus details panel\n"
                 "  [yellow]h / \u2190[/]  Focus left panel\n"
                 "  [yellow]l / \u2192[/]  Focus right panel\n"
@@ -54,10 +68,9 @@ class HelpScreen(ModalScreen):
                 "  [yellow]n[/]      New worktree\n"
                 "  [yellow]c[/]      Cleanup worktree\n"
                 "  [yellow]r[/]      Refresh data\n"
-                "  [yellow]R[/]      Force refresh (daemon)\n"
+                "  [yellow]R[/]      View GitHub PRs\n"
                 "  [yellow]d[/]      Daemon health check\n"
-                "  [yellow]o[/]      Open PR in browser\n"
-                "  [yellow]p[/]      View plans\n"
+                "  [yellow]o[/]      Open PR/Issue in browser\n"
                 "  [yellow]?[/]      Show this help\n"
                 "  [yellow]q[/]      Quit\n",
                 id="help-content",
@@ -114,11 +127,77 @@ class PlansScreen(ModalScreen):
                 self.app.notify(f"Opened issue #{plan.issue}", timeout=2)
 
 
+class PRsScreen(ModalScreen):
+    """Modal screen showing GitHub PRs."""
+
+    BINDINGS = [
+        Binding("escape", "dismiss", "Close"),
+        Binding("q", "app.quit", "Quit"),
+        Binding("ctrl+c", "app.quit", "Quit", show=False),
+        Binding("R", "dismiss", "Close"),
+        Binding("j", "cursor_down", "Down", show=False),
+        Binding("k", "cursor_up", "Up", show=False),
+        Binding("o", "open_pr", "Open PR", show=False),
+        Binding("enter", "open_pr", "Open PR", show=False),
+    ]
+
+    def __init__(self, workspace: Path, state) -> None:
+        super().__init__()
+        self.workspace = workspace
+        self.state = state
+
+    def compose(self) -> ComposeResult:
+        yield Container(
+            Static("[b cyan]GitHub PRs[/] [dim](press o to open, Esc to close)[/]", id="prs-header"),
+            PRsTable(id="prs-table"),
+            id="prs-modal",
+        )
+
+    def on_mount(self) -> None:
+        prs = self._load_prs()
+        prs_table = self.query_one("#prs-table", PRsTable)
+        prs_table.set_prs(prs)
+        prs_table.focus()
+
+    def _load_prs(self) -> list[PRDisplayEntry]:
+        """Load PRs with linked worktree info."""
+        prs = self.state.get_all_prs()
+        result = []
+        for pr in prs:
+            # Check if there's a worktree for this branch
+            wt = self.state.get_worktree_for_branch(pr.repo, pr.branch)
+            result.append(PRDisplayEntry(
+                repo=pr.repo,
+                number=pr.number,
+                title=pr.title,
+                state="DRAFT" if pr.draft else pr.state,
+                branch=pr.branch,
+                checks=pr.checks,
+                worktree=wt.folder if wt else None,
+            ))
+        return result
+
+    def action_cursor_down(self) -> None:
+        self.query_one(PRsTable).action_cursor_down()
+
+    def action_cursor_up(self) -> None:
+        self.query_one(PRsTable).action_cursor_up()
+
+    def action_open_pr(self) -> None:
+        """Open the selected PR in browser."""
+        prs_table = self.query_one(PRsTable)
+        pr = prs_table.get_selected_pr()
+        if pr:
+            url = f"https://github.com/joshribakoff/{pr.repo}/pull/{pr.number}"
+            webbrowser.open(url)
+            self.app.notify(f"Opened PR #{pr.number}", timeout=2)
+
+
 class BearingApp(App):
     """Bearing worktree management TUI."""
 
     CSS_PATH = "styles/app.tcss"
-    TITLE = "Bearing"
+    TITLE = "⚓ Bearing "
 
     BINDINGS = [
         Binding("q", "quit", "Quit"),
@@ -127,13 +206,15 @@ class BearingApp(App):
         Binding("n", "new_worktree", "New"),
         Binding("c", "cleanup", "Cleanup"),
         Binding("r", "refresh", "Refresh"),
-        Binding("R", "force_refresh", "Force Refresh", show=False),
-        Binding("o", "open_pr", "Open PR", show=False),
-        Binding("p", "show_plans", "Plans"),
-        Binding("x", "toggle_closed", "Toggle Closed", show=False),
+        Binding("R", "show_prs", "PRs"),
+        Binding("d", "daemon", "Daemon"),
+        Binding("o", "open_item", "Open", show=False),
+        # View switching
+        Binding("w", "switch_to_worktrees", "Work"),
+        Binding("p", "switch_to_plans", "Plans"),
         # Panel navigation by number (0-indexed)
         Binding("0", "focus_panel_0", "Projects", show=False),
-        Binding("1", "focus_panel_1", "Worktrees", show=False),
+        Binding("1", "focus_panel_1", "Main", show=False),
         Binding("2", "focus_panel_2", "Details", show=False),
         # Vim-style navigation
         Binding("j", "cursor_down", "Down", show=False),
@@ -160,28 +241,96 @@ class BearingApp(App):
         self.workspace = workspace
         self.state = BearingState(workspace)
         self._current_project: str | None = None
+        self._view_mode = ViewMode.WORKTREES
         self._panel_order = ["project-list", "worktree-table", "details-panel"]
 
     def compose(self) -> ComposeResult:
         """Create the app layout."""
-        yield Static("\u2693 Bearing", id="title")
+        yield Static("⚓ Bearing - Work", id="title")
         with Horizontal(id="main-container"):
             with Vertical(id="projects-panel"):
-                yield Label("[0] Projects", classes="panel-header")
+                yield Label("[0] Projects ", classes="panel-header")
                 yield ProjectList(id="project-list")
-            with Vertical(id="worktrees-panel"):
-                yield Label("[1] Worktrees", classes="panel-header")
+            with Vertical(id="main-panel"):
+                yield Label("[1] Worktrees ", classes="panel-header", id="main-panel-header")
                 yield WorktreeTable(id="worktree-table")
+                yield PlansTable(id="plans-table")
         yield Label("[2] Details", classes="panel-header details-header")
         yield DetailsPanel(id="details-panel")
         yield Footer()
 
+    def _update_view(self) -> None:
+        """Update UI for current view mode."""
+        worktree_table = self.query_one("#worktree-table", WorktreeTable)
+        plans_table = self.query_one("#plans-table", PlansTable)
+        header = self.query_one("#main-panel-header", Label)
+        title = self.query_one("#title", Static)
+
+        if self._view_mode == ViewMode.WORKTREES:
+            title.update("⚓ Bearing - Work")
+            worktree_table.display = True
+            plans_table.display = False
+            header.update("[1] Worktrees")
+            self._panel_order = ["project-list", "worktree-table", "details-panel"]
+        else:
+            title.update("⚓ Bearing - Plans")
+            worktree_table.display = False
+            plans_table.display = True
+            header.update("[1] Plans")
+            self._panel_order = ["project-list", "plans-table", "details-panel"]
+
+        # Update project list for current view
+        if self._view_mode == ViewMode.WORKTREES:
+            self._refresh_worktrees_view()
+        else:
+            self._refresh_plans_view()
+
+    def _refresh_worktrees_view(self) -> None:
+        """Refresh project list with worktree counts, preserving selection."""
+        projects = self.state.get_projects()
+        local_entries = self.state.read_local()
+        counts: dict[str, int] = {}
+        for entry in local_entries:
+            counts[entry.repo] = counts.get(entry.repo, 0) + 1
+        project_list = self.query_one(ProjectList)
+        project_list.set_projects(projects, counts, preserve_selection=self._current_project)
+
+    def _refresh_plans_view(self) -> None:
+        """Refresh project list with plan counts, preserving selection."""
+        plan_projects = self.state.get_plan_projects()
+        counts: dict[str, int] = {}
+        for project in plan_projects:
+            plans = self.state.get_plans_for_project(project)
+            counts[project] = len(plans)
+        project_list = self.query_one(ProjectList)
+        project_list.set_projects(plan_projects, counts, preserve_selection=self._current_project)
+
+    def action_switch_to_worktrees(self) -> None:
+        """Switch to worktrees view."""
+        if self._view_mode != ViewMode.WORKTREES:
+            self._view_mode = ViewMode.WORKTREES
+            self._update_view()
+            # If project selected, load its worktrees and focus panel 1
+            if self._current_project:
+                self._update_worktree_table(self._current_project)
+                self.query_one(WorktreeTable).focus()
+
+    def action_switch_to_plans(self) -> None:
+        """Switch to plans view."""
+        if self._view_mode != ViewMode.PLANS:
+            self._view_mode = ViewMode.PLANS
+            self._update_view()
+            # If project selected, load its plans and focus panel 1
+            if self._current_project:
+                self._update_plans_table(self._current_project)
+                self.query_one(PlansTable).focus()
+
     @property
     def _session_file(self) -> Path:
-        """Path to session state file (workspace-relative for test isolation)."""
-        session_dir = self.workspace / ".bearing"
-        session_dir.mkdir(exist_ok=True)
-        return session_dir / "tui-session.json"
+        """Path to session state file."""
+        bearing_dir = Path.home() / ".bearing"
+        bearing_dir.mkdir(exist_ok=True)
+        return bearing_dir / "tui-session.json"
 
     def _save_session(self) -> None:
         """Save full UI state to session file."""
@@ -288,6 +437,8 @@ class BearingApp(App):
     def on_mount(self) -> None:
         """Load data when app mounts."""
         self._ensure_daemon_running()
+        # Hide plans table initially (worktrees is default view)
+        self.query_one("#plans-table", PlansTable).display = False
         self.action_refresh()
         # Restore session (includes focus) or default to project list
         if not self._restore_session():
@@ -306,38 +457,22 @@ class BearingApp(App):
         """Show the plans modal."""
         self.push_screen(PlansScreen(self.workspace))
 
+    def action_show_prs(self) -> None:
+        """Show the PRs modal."""
+        self.push_screen(PRsScreen(self.workspace, self.state))
+
     def action_refresh(self) -> None:
-        """Refresh data from files, preserving current selection."""
-        # Save current selection
+        """Refresh data for current view, preserving selection."""
         saved_project = self._current_project
-        worktree_table = self.query_one(WorktreeTable)
-        saved_cursor = worktree_table.cursor_row if worktree_table.row_count > 0 else None
 
-        projects = self.state.get_projects()
-
-        # Count worktrees per project
-        local_entries = self.state.read_local()
-        counts: dict[str, int] = {}
-        for entry in local_entries:
-            counts[entry.repo] = counts.get(entry.repo, 0) + 1
-
-        project_list = self.query_one(ProjectList)
-        # Pass preserve_selection to maintain highlight during refresh
-        project_list.set_projects(projects, counts, preserve_selection=saved_project if saved_project in projects else None)
-
-        # Restore worktree data if project still exists
-        if saved_project and saved_project in projects:
-            self._current_project = saved_project
-            self._update_worktree_table(saved_project)
-            # Restore worktree cursor position
-            if saved_cursor is not None and worktree_table.row_count > saved_cursor:
-                worktree_table.cursor_coordinate = (saved_cursor, 0)
+        if self._view_mode == ViewMode.WORKTREES:
+            self._refresh_worktrees_view()
+            if saved_project:
+                self._update_worktree_table(saved_project)
         else:
-            # Clear worktree table and details only if no selection to restore
-            worktree_table.clear_worktrees()
-            details = self.query_one(DetailsPanel)
-            details.clear()
-            self._current_project = None
+            self._refresh_plans_view()
+            if saved_project:
+                self._update_plans_table(saved_project)
 
         self.notify("Data refreshed", timeout=2)
 
@@ -346,8 +481,11 @@ class BearingApp(App):
         self.query_one("#project-list", ProjectList).focus()
 
     def action_focus_panel_1(self) -> None:
-        """Focus the worktrees panel."""
-        self.query_one("#worktree-table", WorktreeTable).focus()
+        """Focus the main panel (worktrees or plans)."""
+        if self._view_mode == ViewMode.WORKTREES:
+            self.query_one("#worktree-table", WorktreeTable).focus()
+        else:
+            self.query_one("#plans-table", PlansTable).focus()
 
     def action_focus_panel_2(self) -> None:
         """Focus the details panel."""
@@ -388,48 +526,18 @@ class BearingApp(App):
     def on_project_list_project_selected(self, event: ProjectList.ProjectSelected) -> None:
         """Handle project selection."""
         self._current_project = event.project
-        self._update_worktree_table(event.project)
-        # Auto-focus worktrees panel after selecting a project
-        self.query_one(WorktreeTable).focus()
+        if self._view_mode == ViewMode.WORKTREES:
+            self._update_worktree_table(event.project)
+            self.query_one(WorktreeTable).focus()
+        else:
+            self._update_plans_table(event.project)
+            self.query_one(PlansTable).focus()
 
     def _update_worktree_table(self, project: str) -> None:
         """Update worktree table for selected project."""
         worktrees = self.state.get_worktrees_for_project(project)
 
-        # Load plans and create lookup by branch name
-        plans = load_plans(self.workspace)
-        plan_by_branch: dict[str, tuple[str, str | None]] = {}
-        for plan in plans:
-            if plan.project == project:
-                # Extract branch from plan filename or frontmatter
-                # Plan files are like "022-tui-planning-view-v2.md" -> branch might be "tui-planning-view-v2"
-                plan_name = plan.file_path.stem  # e.g., "022-tui-planning-view-v2"
-                # Try to match branch names that contain the plan suffix
-                parts = plan_name.split("-", 1)
-                if len(parts) > 1:
-                    branch_hint = parts[1]  # e.g., "tui-planning-view-v2"
-                    plan_by_branch[branch_hint] = (plan_name, plan.issue)
-
-        wt_entries = []
-        for w in worktrees:
-            # Try to find matching plan by branch name
-            plan_name = None
-            plan_issue = None
-            for branch_hint, (pname, pissue) in plan_by_branch.items():
-                if branch_hint in w.branch or w.branch in branch_hint:
-                    plan_name = pname
-                    plan_issue = pissue
-                    break
-
-            wt_entries.append(WorktreeEntry(
-                folder=w.folder,
-                repo=w.repo,
-                branch=w.branch,
-                base=w.base,
-                plan=plan_name,
-                issue=plan_issue,
-            ))
-
+        # Build health map first (needed for sorting)
         health_map = {}
         for w in worktrees:
             health = self.state.get_health_for_folder(w.folder)
@@ -442,29 +550,36 @@ class BearingApp(App):
                     pr_title=health.pr_title,
                 )
 
-        # Build workflow lookup for created dates (newest first like GitHub)
+        # Build workflow map for created dates (needed for sorting)
         workflow_map = {}
         for w in worktrees:
             wf = self.state.get_workflow_for_branch(w.repo, w.branch)
             if wf and wf.created:
                 workflow_map[w.folder] = wf.created
 
-        # Sort worktrees: Open PRs first, then Draft, then others, base worktrees last
-        # Within each category, sort by created date descending (newest first)
+        # Build entries
+        wt_entries = []
+        for w in worktrees:
+            wt_entries.append(WorktreeEntry(
+                folder=w.folder,
+                repo=w.repo,
+                branch=w.branch,
+                base=w.base,
+            ))
+
+        # Sort: Open PRs first, then Draft, then others, base worktrees last
         def sort_key(entry: WorktreeEntry) -> tuple:
             health = health_map.get(entry.folder)
             pr_state = health.pr_state if health else None
-            # Negative timestamp for descending order (newest first)
             created = workflow_map.get(entry.folder)
             created_sort = -created.timestamp() if created else 0
-            # Priority: OPEN=0, DRAFT=1, other PR=2, no PR=3, base=4
             if entry.base:
                 return (4, created_sort, entry.branch)
             if pr_state == "OPEN":
                 return (0, created_sort, entry.branch)
             if pr_state == "DRAFT":
                 return (1, created_sort, entry.branch)
-            if pr_state:  # MERGED, CLOSED, etc.
+            if pr_state:
                 return (2, created_sort, entry.branch)
             return (3, created_sort, entry.branch)
 
@@ -473,9 +588,30 @@ class BearingApp(App):
         worktree_table = self.query_one(WorktreeTable)
         worktree_table.set_worktrees(wt_entries, health_map)
 
+    def _update_plans_table(self, project: str) -> None:
+        """Update plans table for selected project."""
+        plans_data = self.state.get_plans_for_project(project)
+        plans = [
+            PlanEntry(
+                file_path=p["file_path"],
+                project=p["project"],
+                title=p["title"],
+                issue=p["issue"],
+                status=p["status"],
+                pr=p.get("pr"),
+            )
+            for p in plans_data
+        ]
+        plans_table = self.query_one(PlansTable)
+        plans_table.set_plans(plans)
+
     def on_worktree_table_worktree_selected(self, event: WorktreeTable.WorktreeSelected) -> None:
         """Handle worktree selection."""
         self._update_details(event.folder)
+
+    def on_plans_table_plan_selected(self, event: PlansTable.PlanSelected) -> None:
+        """Handle plan selection."""
+        self._update_plan_details(event.plan)
 
     def _update_details(self, folder: str) -> None:
         """Update details panel for selected worktree."""
@@ -520,12 +656,42 @@ class BearingApp(App):
         details = self.query_one(DetailsPanel)
         details.set_worktree(local_entry, workflow_entry, health_entry)
 
+    def _update_plan_details(self, plan: PlanEntry) -> None:
+        """Update details panel for selected plan."""
+        from rich.text import Text
+        details = self.query_one(DetailsPanel)
+
+        text = Text()
+        text.append("Plan: ", style="bold blue")
+        text.append(f"{plan.title}\n", style="bright_white")
+        text.append("Project: ", style="bold blue")
+        text.append(f"{plan.project}\n", style="bright_white")
+        text.append("Status: ", style="bold blue")
+        status_style = {
+            "active": "bold green",
+            "in_progress": "bold yellow",
+            "draft": "dim",
+            "completed": "bold cyan",
+        }.get(plan.status, "white")
+        text.append(f"{plan.status}", style=status_style)
+        if plan.issue:
+            text.append("  ")
+            text.append(f"Issue: #{plan.issue}", style="bold cyan")
+        if plan.pr:
+            text.append("  ")
+            text.append(f"PR: {plan.pr}", style="bold green")
+        text.append("\n")
+        text.append("File: ", style="bold blue")
+        text.append(str(plan.file_path), style="dim")
+
+        details.update(text)
+
     def action_cursor_down(self) -> None:
         """Move cursor down in focused widget."""
         focused = self.focused
         if isinstance(focused, ProjectList):
             focused.action_cursor_down()
-        elif isinstance(focused, WorktreeTable):
+        elif isinstance(focused, (WorktreeTable, PlansTable)):
             focused.action_cursor_down()
 
     def action_cursor_up(self) -> None:
@@ -533,7 +699,7 @@ class BearingApp(App):
         focused = self.focused
         if isinstance(focused, ProjectList):
             focused.action_cursor_up()
-        elif isinstance(focused, WorktreeTable):
+        elif isinstance(focused, (WorktreeTable, PlansTable)):
             focused.action_cursor_up()
 
     def action_focus_left(self) -> None:
@@ -541,8 +707,11 @@ class BearingApp(App):
         self.query_one(ProjectList).focus()
 
     def action_focus_right(self) -> None:
-        """Focus the worktree table."""
-        self.query_one(WorktreeTable).focus()
+        """Focus the main table (worktrees or plans)."""
+        if self._view_mode == ViewMode.WORKTREES:
+            self.query_one(WorktreeTable).focus()
+        else:
+            self.query_one(PlansTable).focus()
 
     def action_new_worktree(self) -> None:
         """Create a new worktree (placeholder)."""
@@ -551,12 +720,6 @@ class BearingApp(App):
     def action_cleanup(self) -> None:
         """Cleanup a worktree (placeholder)."""
         self.notify("Cleanup: not yet implemented", timeout=2)
-
-    def action_toggle_closed(self) -> None:
-        """Toggle visibility of closed/merged PRs."""
-        worktree_table = self.query_one(WorktreeTable)
-        hidden = worktree_table.toggle_hide_closed()
-        self.notify(f"Closed PRs: {'hidden' if hidden else 'shown'}", timeout=2)
 
     def action_daemon(self) -> None:
         """Check daemon status and trigger health refresh if running."""
@@ -598,7 +761,14 @@ class BearingApp(App):
         except subprocess.TimeoutExpired:
             self.notify("Force refresh timed out", timeout=2)
 
-    def action_open_pr(self) -> None:
+    def action_open_item(self) -> None:
+        """Open the selected item (PR for worktrees, issue for plans)."""
+        if self._view_mode == ViewMode.WORKTREES:
+            self._open_worktree_pr()
+        else:
+            self._open_plan_issue()
+
+    def _open_worktree_pr(self) -> None:
         """Open PR in browser for selected worktree."""
         from textual.coordinate import Coordinate
 
@@ -651,7 +821,7 @@ class BearingApp(App):
             if result.returncode == 0 and result.stdout.strip():
                 url = result.stdout.strip()
                 webbrowser.open(url)
-                self.notify(f"Opened PR", timeout=2)
+                self.notify("Opened PR", timeout=2)
             else:
                 self.notify("Could not get PR URL", timeout=2)
         except FileNotFoundError:
@@ -660,6 +830,23 @@ class BearingApp(App):
             self.notify("PR lookup timed out", timeout=2)
         except Exception as e:
             self.notify(f"Error: {e}", timeout=2)
+
+    def _open_plan_issue(self) -> None:
+        """Open GitHub issue for selected plan."""
+        plans_table = self.query_one(PlansTable)
+        plan = plans_table.get_selected_plan()
+        if not plan:
+            self.notify("No plan selected", timeout=2)
+            return
+
+        if not plan.issue:
+            self.notify("No issue linked to this plan", timeout=2)
+            return
+
+        # Construct issue URL
+        url = f"https://github.com/joshribakoff/{plan.project}/issues/{plan.issue}"
+        webbrowser.open(url)
+        self.notify(f"Opened issue #{plan.issue}", timeout=2)
 
 
 def _create_mock_workspace():
@@ -736,6 +923,23 @@ def _create_mock_workspace():
     ]
     with open(tmpdir / "health.jsonl", "w") as f:
         for entry in health_data:
+            f.write(json.dumps(entry) + "\n")
+
+    # Mock prs.jsonl - GitHub PRs across all repos
+    prs_data = [
+        {"repo": "acme-web", "number": 142, "title": "Add OAuth2 authentication flow", "state": "OPEN", "branch": "feature-auth", "baseBranch": "main", "author": "alice", "updated": "2026-01-19T18:00:00Z", "checks": "SUCCESS", "draft": False},
+        {"repo": "acme-web", "number": 138, "title": "Fix checkout cart calculation bug", "state": "MERGED", "branch": "fix-checkout", "baseBranch": "main", "author": "bob", "updated": "2026-01-19T12:00:00Z", "checks": "SUCCESS", "draft": False},
+        {"repo": "acme-web", "number": 145, "title": "Implement lazy loading for product images", "state": "OPEN", "branch": "perf-images", "baseBranch": "main", "author": "alice", "updated": "2026-01-19T20:00:00Z", "checks": "PENDING", "draft": False},
+        {"repo": "acme-web", "number": 130, "title": "New design system v2", "state": "OPEN", "branch": "redesign-v2", "baseBranch": "main", "author": "carol", "updated": "2026-01-18T10:00:00Z", "checks": "FAILURE", "draft": True},
+        {"repo": "acme-web", "number": 140, "title": "Add dark mode theme support", "state": "OPEN", "branch": "dark-mode", "baseBranch": "main", "author": "bob", "updated": "2026-01-17T14:00:00Z", "checks": "SUCCESS", "draft": False},
+        {"repo": "acme-web", "number": 143, "title": "Internationalization support", "state": "OPEN", "branch": "i18n", "baseBranch": "main", "author": "alice", "updated": "2026-01-19T08:00:00Z", "checks": "SUCCESS", "draft": False},
+        {"repo": "acme-api", "number": 89, "title": "Add GraphQL API layer", "state": "OPEN", "branch": "graphql", "baseBranch": "main", "author": "dave", "updated": "2026-01-19T16:00:00Z", "checks": "SUCCESS", "draft": False},
+        {"repo": "acme-api", "number": 85, "title": "Implement rate limiting middleware", "state": "MERGED", "branch": "rate-limit", "baseBranch": "main", "author": "eve", "updated": "2026-01-18T09:00:00Z", "checks": "SUCCESS", "draft": False},
+        {"repo": "acme-mobile", "number": 67, "title": "Push notification integration", "state": "OPEN", "branch": "push-notif", "baseBranch": "main", "author": "frank", "updated": "2026-01-19T11:00:00Z", "checks": "PENDING", "draft": True},
+        {"repo": "infra", "number": 34, "title": "Kubernetes cluster upgrade to 1.29", "state": "OPEN", "branch": "k8s-upgrade", "baseBranch": "main", "author": "grace", "updated": "2026-01-19T15:00:00Z", "checks": "SUCCESS", "draft": False},
+    ]
+    with open(tmpdir / "prs.jsonl", "w") as f:
+        for entry in prs_data:
             f.write(json.dumps(entry) + "\n")
 
     return tmpdir

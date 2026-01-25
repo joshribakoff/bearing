@@ -5,6 +5,7 @@ from .scenarios import (
     create_overflow_workspace,
     create_long_names_workspace,
     create_single_workspace,
+    create_prs_workspace,
     SCENARIOS,
 )
 
@@ -14,5 +15,6 @@ __all__ = [
     "create_overflow_workspace",
     "create_long_names_workspace",
     "create_single_workspace",
+    "create_prs_workspace",
     "SCENARIOS",
 ]
