@@ -185,6 +185,7 @@ class BearingState:
                     "issue": fm.get("issue"),
                     "status": fm.get("status", "draft"),
                     "pr": fm.get("pr"),
+                    "branch": fm.get("branch"),
                 })
             except Exception:
                 continue

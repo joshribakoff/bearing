@@ -557,14 +557,24 @@ class BearingApp(App):
             if wf and wf.created:
                 workflow_map[w.folder] = wf.created
 
+        # Build plan map: branch -> (plan_title, issue)
+        plan_map: dict[str, tuple[str, str | None]] = {}
+        plans_data = self.state.get_plans_for_project(project)
+        for p in plans_data:
+            if p.get("branch"):
+                plan_map[p["branch"]] = (p["title"], p.get("issue"))
+
         # Build entries
         wt_entries = []
         for w in worktrees:
+            plan_info = plan_map.get(w.branch)
             wt_entries.append(WorktreeEntry(
                 folder=w.folder,
                 repo=w.repo,
                 branch=w.branch,
                 base=w.base,
+                plan=plan_info[0] if plan_info else None,
+                issue=plan_info[1] if plan_info else None,
             ))
 
         # Sort: Open PRs first, then Draft, then others, base worktrees last
